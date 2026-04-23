@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>タスク管理ボード</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="app-header">
+    <h1 class="app-title">タスク管理ボード</h1>
+    <p class="today-date" id="today-date"></p>
+  </header>
+
+  <!-- ===== ボード（列の並び） ===== -->
+  <main class="board" id="board">
+
+    <!-- 列：やること -->
+    <div class="column" data-status="todo">
+      <div class="column-header">
+        <span class="column-title">やること</span>
+        <span class="task-count" id="count-todo">0</span>
+      </div>
+      <div class="card-list" id="list-todo"></div>
+      <button class="add-btn" data-status="todo">＋ タスクを追加</button>
+    </div>
+
+    <!-- 列：進行中 -->
+    <div class="column" data-status="doing">
+      <div class="column-header">
+        <span class="column-title">進行中</span>
+        <span class="task-count" id="count-doing">0</span>
+      </div>
+      <div class="card-list" id="list-doing"></div>
+      <button class="add-btn" data-status="doing">＋ タスクを追加</button>
+    </div>
+
+    <!-- 列：完了 -->
+    <div class="column" data-status="done">
+      <div class="column-header">
+        <span class="column-title">完了</span>
+        <span class="task-count" id="count-done">0</span>
+      </div>
+      <div class="card-list" id="list-done"></div>
+      <button class="add-btn" data-status="done">＋ タスクを追加</button>
+    </div>
+
+  </main>
+
+  <!-- ===== モーダル（タスク追加・編集フォーム） ===== -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal">
+      <h2 class="modal-heading" id="modal-heading">タスクを追加</h2>
+
+      <form id="task-form">
+        <!-- タイトル -->
+        <div class="form-group">
+          <label for="input-title">タイトル <span class="required">*</span></label>
+          <input type="text" id="input-title" placeholder="例：レポートを仕上げる" required>
+        </div>
+
+        <!-- 説明文 -->
+        <div class="form-group">
+          <label for="input-desc">説明文</label>
+          <textarea id="input-desc" placeholder="タスクの詳細・メモを入力" rows="3"></textarea>
+        </div>
+
+        <!-- 優先度 -->
+        <div class="form-group">
+          <label for="input-priority">優先度</label>
+          <select id="input-priority">
+            <option value="high">🔴 高</option>
+            <option value="medium" selected>🟡 中</option>
+            <option value="low">🟢 低</option>
+          </select>
+        </div>
+
+        <!-- 期限 -->
+        <div class="form-group">
+          <label for="input-due">期限</label>
+          <input type="date" id="input-due">
+        </div>
+
+        <!-- ボタン -->
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">保存する</button>
+          <button type="button" class="btn-cancel" id="btn-cancel">キャンセル</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

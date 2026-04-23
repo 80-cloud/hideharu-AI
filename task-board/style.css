@@ -1,0 +1,297 @@
+/* =============================================
+   カスタマイズガイド
+   - 色を変えたい → :root の変数を編集するだけ
+   - フォントを変えたい → --font-base を編集
+   - カードの角丸を変えたい → --radius を編集
+============================================= */
+:root {
+  --color-bg: #f0f2f5;
+  --color-header: #1a73e8;
+  --color-column: #ebecf0;
+  --color-card: #ffffff;
+  --color-text: #172b4d;
+  --color-text-light: #6b778c;
+  --color-border: #dfe1e6;
+  --color-add-btn: #0079bf;
+
+  /* 優先度カラー */
+  --color-high: #eb5757;
+  --color-medium: #f2a900;
+  --color-low: #37a169;
+
+  --radius: 8px;
+  --font-base: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+}
+
+/* ===== リセット & ベース ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-base);
+  background: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+}
+
+/* ===== ヘッダー ===== */
+.app-header {
+  background: var(--color-header);
+  color: #fff;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.app-title { font-size: 1.4rem; font-weight: 700; }
+
+.today-date {
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+/* ===== ボード（横並びの列） ===== */
+.board {
+  display: flex;
+  gap: 16px;
+  padding: 24px;
+  overflow-x: auto;
+  align-items: flex-start;
+  min-height: calc(100vh - 64px);
+}
+
+/* ===== 列 ===== */
+.column {
+  background: var(--color-column);
+  border-radius: var(--radius);
+  width: 280px;
+  flex-shrink: 0;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0 8px;
+}
+
+.column-title { font-weight: 700; font-size: 1rem; }
+
+.task-count {
+  background: var(--color-text-light);
+  color: #fff;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  font-weight: 600;
+}
+
+/* ===== カードリスト（ドロップゾーン） ===== */
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.card-list.drag-over {
+  background: rgba(0, 121, 191, 0.1);
+  border-radius: var(--radius);
+  outline: 2px dashed var(--color-add-btn);
+}
+
+/* ===== カード ===== */
+.card {
+  background: var(--color-card);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  cursor: grab;
+  border-left: 4px solid transparent;
+  transition: box-shadow 0.15s;
+}
+
+.card:hover { box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+.card.dragging { opacity: 0.4; cursor: grabbing; }
+
+/* 優先度ごとの左ボーダー色 */
+.card[data-priority="high"]   { border-left-color: var(--color-high); }
+.card[data-priority="medium"] { border-left-color: var(--color-medium); }
+.card[data-priority="low"]    { border-left-color: var(--color-low); }
+
+.card-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+
+.card-desc {
+  font-size: 0.82rem;
+  color: var(--color-text-light);
+  margin-bottom: 8px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.badge-priority {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  color: #fff;
+}
+.badge-priority.high   { background: var(--color-high); }
+.badge-priority.medium { background: var(--color-medium); }
+.badge-priority.low    { background: var(--color-low); }
+
+.card-due {
+  font-size: 0.75rem;
+  color: var(--color-text-light);
+}
+
+/* 期限切れは赤く表示 */
+.card-due.overdue { color: var(--color-high); font-weight: 700; }
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 8px;
+}
+
+.btn-edit, .btn-delete {
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-edit   { background: #e8f0fe; color: #1a73e8; }
+.btn-delete { background: #fce8e6; color: #d32f2f; }
+
+/* ===== 追加ボタン ===== */
+.add-btn {
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  text-align: left;
+  color: var(--color-text-light);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.add-btn:hover {
+  background: rgba(0,0,0,0.08);
+  color: var(--color-text);
+}
+
+/* ===== モーダル ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.modal-overlay.hidden { display: none; }
+
+.modal {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 28px;
+  width: 420px;
+  max-width: 95vw;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+
+.modal-heading {
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+}
+
+/* ===== フォーム ===== */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.required { color: var(--color-high); }
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  font-family: var(--font-base);
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  border-color: var(--color-header);
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.btn-primary {
+  background: var(--color-header);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 9px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-primary:hover { opacity: 0.85; }
+
+.btn-cancel {
+  background: #f1f1f1;
+  color: var(--color-text);
+  border: none;
+  border-radius: 4px;
+  padding: 9px 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.btn-cancel:hover { background: var(--color-border); }
