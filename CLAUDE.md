@@ -38,7 +38,7 @@
 
 ## 2. Issue ファースト・ワークフロー
 
-**作業を始める前に必ず GitHub Issue を作成すること。** コードを書く前の手順：
+**作業を始める前に必ず GitHub Issue を作成すること（または既存 Issue を確認すること）。** コードを書く前の手順：
 
 ```
 ① GitHub で Issue を作成する（テンプレートを使用）
@@ -58,7 +58,7 @@
 
 ## 3. コミットメッセージ規則
 
-**すべてのコミットメッセージは日本語で書くこと。**
+**すべてのコミットメッセージは Conventional Commits 形式で、日本語で書くこと。**
 
 ### フォーマット
 
@@ -194,7 +194,36 @@ cd /Users/macmini/Desktop/Cursor/task-board/backend
 
 ---
 
-## 8. このファイルの更新ルール
+## 8. GitHub ブランチ保護設定（セットアップ用コマンド）
+
+リポジトリを新規セットアップする際や保護設定をリセットする際に使用する `gh api` コマンド。
+
+```bash
+gh api repos/80-cloud/hideharu-AI/branches/main/protection \
+  --method PUT \
+  --header "Accept: application/vnd.github+json" \
+  --input - <<'EOF'
+{
+  "required_status_checks": null,
+  "enforce_admins": false,
+  "required_pull_request_reviews": {
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": false,
+    "required_approving_review_count": 0
+  },
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
+EOF
+```
+
+> `required_pull_request_reviews` を設定することで、PR なしに main へマージできなくなる。
+> `required_approving_review_count: 0` はソロ開発向け（承認者不要、ただし PR 自体は必須）。
+
+---
+
+## 9. このファイルの更新ルール
 
 - ルールを変更したい場合は、必ず Issue を立ててから PR 経由で変更すること
 - 直接編集してコミットしない
