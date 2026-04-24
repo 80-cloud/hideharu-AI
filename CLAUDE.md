@@ -144,6 +144,7 @@ Issue・PR には必ずラベルを付けること。
 5. PR なしに main へのコードを反映しない
 6. `.env` ファイルを Git にコミットしない
 7. データベースのパスワードをコードに直書きしない
+8. **サーバー起動時に別ポートで代替起動しない**（詳細は §11 参照）
 
 ---
 
@@ -160,6 +161,9 @@ docker-compose up -d
 cd /Users/macmini/Desktop/Cursor/task-board/backend
 ./gradlew bootRun
 ```
+
+> **ポート競合が発生した場合は §11 の手順に従って既存プロセスを停止してから起動すること。**  
+> 別ポートで代替起動することは禁止。
 
 ### ビルドツール
 
@@ -251,3 +255,63 @@ gh label list --repo 80-cloud/hideharu-AI
 - ルールを変更したい場合は、必ず Issue を立ててから PR 経由で変更すること
 - 直接編集してコミットしない
 - 変更時のコミットメッセージ: `chore: CLAUDE.md のルールを更新 (#番号)`
+
+---
+
+## 11. サーバー起動時のポート競合解消ルール
+
+### 原則
+
+**ポートが競合した場合、別ポートで代替起動することは絶対に禁止。**  
+アプリ内で指定された正規ポート（バックエンド: 8080 / フロントエンド: 5173）で必ず起動すること。
+
+別ポートで起動すると Vite プロキシやバックエンドの参照先が崩れ、正常動作しないため。
+
+### 手順
+
+サーバーを起動する前に、必ず以下の順序で実行すること。
+
+#### Step 1: ポートの使用状況を確認する
+
+```bash
+lsof -ti:8080  # バックエンド（使用中なら PID が表示される）
+lsof -ti:5173  # フロントエンド（使用中なら PID が表示される）
+```
+
+#### Step 2: 競合プロセスを停止する
+
+```bash
+# バックエンドのポートが競合している場合
+lsof -ti:8080 | xargs kill -9
+
+# フロントエンドのポートが競合している場合
+lsof -ti:5173 | xargs kill -9
+```
+
+停止後、`lsof -ti:PORT` の出力が空になったことを確認してから次へ進む。
+
+#### Step 3: 正規ポートで起動する
+
+```bash
+# バックエンド（ポート 8080）
+cd /Users/macmini/Desktop/Cursor/task-board/backend
+./gradlew bootRun
+
+# フロントエンド（ポート 5173）
+cd /Users/macmini/Desktop/Cursor/task-board/frontend
+npm run dev
+```
+
+### 正規ポート一覧
+
+| サービス | 正規ポート | 設定ファイル |
+|---|---|---|
+| Spring Boot バックエンド | **8080** | `backend/src/main/resources/application.yml` |
+| Vite フロントエンド | **5173** | `frontend/vite.config.ts`（Vite デフォルト） |
+| PostgreSQL | **5432** | `task-board/docker-compose.yml` |
+
+### 注意事項
+
+- `./gradlew bootRun --args='--server.port=XXXX'` のように別ポート引数を渡さないこと
+- `npm run dev -- --port XXXX` のように別ポートを指定しないこと
+- Docker の PostgreSQL も `5432` 以外にマッピングしないこと
