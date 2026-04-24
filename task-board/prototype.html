@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>タスク管理ボード（プロトタイプ）</title>
+  <style>
+    :root {
+      --color-bg:         #f0f2f5;
+      --color-header:     #1a73e8;
+      --color-text:       #172b4d;
+      --color-text-light: #6b778c;
+      --color-border:     #dfe1e6;
+      --color-card:       #ffffff;
+      --color-col-todo:   #dbeafe;
+      --color-col-doing:  #fef9c3;
+      --color-col-done:   #dcfce7;
+      --color-high:       #eb5757;
+      --color-medium:     #f2a900;
+      --color-low:        #6b778c;
+      --radius: 8px;
+      --font: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--color-bg); color: var(--color-text); min-height: 100vh; }
+
+    /* ===== ヘッダー ===== */
+    .app-header {
+      background: var(--color-header);
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .app-title  { font-size: 1.4rem; font-weight: 700; }
+    .today-date { font-size: 0.9rem; opacity: 0.9; }
+
+    /* ===== ボード ===== */
+    .board {
+      display: flex;
+      gap: 16px;
+      padding: 24px;
+      overflow-x: auto;
+      align-items: flex-start;
+      min-height: calc(100vh - 64px);
+    }
+
+    /* ===== カラム ===== */
+    .column {
+      border-radius: var(--radius);
+      width: 280px;
+      flex-shrink: 0;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .column[data-status="todo"]  { background: var(--color-col-todo); }
+    .column[data-status="doing"] { background: var(--color-col-doing); }
+    .column[data-status="done"]  { background: var(--color-col-done); }
+
+    /* カラムヘッダー（タイトル行 ＋ 並び替えボタン行） */
+    .column-header { display: flex; flex-direction: column; gap: 8px; padding: 4px 0 8px; }
+    .column-title-row { display: flex; justify-content: space-between; align-items: center; }
+    .column-title { font-weight: 700; font-size: 1rem; }
+    .task-count {
+      background: var(--color-text-light);
+      color: #fff;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      padding: 2px 9px;
+      font-weight: 600;
+    }
+
+    /* 並び替えボタン（クリック時のみ反応・常時アクティブ表示なし） */
+    .sort-btns { display: flex; gap: 6px; }
+    .btn-sort {
+      font-size: 0.72rem;
+      padding: 3px 10px;
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.6);
+      cursor: pointer;
+      color: var(--color-text-light);
+      transition: all 0.15s;
+    }
+    .btn-sort:hover  { background: rgba(255,255,255,0.9); color: var(--color-text); }
+    .btn-sort:active { background: var(--color-header); color: #fff; border-color: var(--color-header); }
+
+    /* ===== カードリスト ===== */
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 48px;
+      border-radius: var(--radius);
+      padding: 2px;
+      transition: background 0.15s;
+    }
+    .card-list.drag-over { background: rgba(26,115,232,0.08); }
+
+    /* ===== ドロップ位置インジケーター ===== */
+    .drop-placeholder {
+      height: 3px;
+      background: var(--color-header);
+      border-radius: 2px;
+      pointer-events: none;
+      flex-shrink: 0;
+    }
+
+    /* ===== タスクカード ===== */
+    .card {
+      background: var(--color-card);
+      border-radius: var(--radius);
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+      border-left: 4px solid transparent;
+      transition: box-shadow 0.15s, opacity 0.15s;
+      cursor: grab;
+    }
+    .card:hover    { box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+    .card.dragging { opacity: 0.35; cursor: grabbing; }
+    .card[data-priority="high"]   { border-left-color: var(--color-high); }
+    .card[data-priority="medium"] { border-left-color: var(--color-medium); }
+    .card[data-priority="low"]    { border-left-color: var(--color-low); }
+
+    /* カード本体（クリックで編集） */
+    .card-body { cursor: pointer; }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 6px;
+      word-break: break-word;
+    }
+    .card-desc {
+      font-size: 0.82rem;
+      color: var(--color-text-light);
+      margin-bottom: 8px;
+      word-break: break-word;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card-meta { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px; }
+    .badge-priority { font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; color: #fff; }
+    .badge-priority.high   { background: var(--color-high); }
+    .badge-priority.medium { background: var(--color-medium); }
+    .badge-priority.low    { background: var(--color-low); }
+    .card-due { font-size: 0.75rem; color: var(--color-text-light); }
+    .card-due.overdue { color: var(--color-high); font-weight: 700; }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      border-top: 1px solid var(--color-border);
+      padding-top: 8px;
+    }
+    .btn-edit, .btn-delete-sm {
+      font-size: 0.75rem;
+      padding: 3px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-edit      { background: #e8f0fe; color: #1a73e8; }
+    .btn-delete-sm { background: #fce8e6; color: #d32f2f; }
+
+    /* ===== ＋追加ボタン ===== */
+    .add-btn {
+      width: 100%;
+      padding: 8px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius);
+      text-align: left;
+      color: var(--color-text-light);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .add-btn:hover { background: rgba(0,0,0,0.08); color: var(--color-text); }
+
+    /* ===== モーダル ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 440px;
+      max-width: 95vw;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+    .modal-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-heading { font-size: 1.1rem; font-weight: 700; }
+    .btn-close {
+      background: none; border: none; font-size: 1.3rem; cursor: pointer;
+      color: var(--color-text-light); padding: 2px 6px; border-radius: 4px; line-height: 1;
+    }
+    .btn-close:hover { background: var(--color-border); }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .form-group label { font-size: 0.85rem; font-weight: 600; }
+    .required { color: var(--color-high); }
+    .form-group input, .form-group textarea, .form-group select {
+      border: 1px solid var(--color-border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      font-size: 0.9rem;
+      font-family: var(--font);
+      color: var(--color-text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--color-header); }
+    .form-group input.error-field { border-color: var(--color-high); }
+    .error-msg { font-size: 0.8rem; color: var(--color-high); }
+    .error-msg.hidden { display: none; }
+    .form-row { display: flex; gap: 16px; }
+    .form-row .form-group { flex: 1; }
+
+    /* アクション行：削除ボタン左 ／ キャンセル・保存 右 */
+    .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--color-border); }
+    .form-actions-right { display: flex; gap: 10px; margin-left: auto; }
+
+    .btn-primary {
+      background: var(--color-header); color: #fff; border: none;
+      border-radius: 4px; padding: 9px 20px; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-cancel {
+      background: #f1f1f1; color: var(--color-text); border: none;
+      border-radius: 4px; padding: 9px 16px; font-size: 0.9rem; cursor: pointer;
+    }
+    .btn-cancel:hover { background: var(--color-border); }
+    .btn-danger {
+      background: #fce8e6; color: #d32f2f; border: none;
+      border-radius: 4px; padding: 9px 16px; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s, color 0.15s;
+    }
+    .btn-danger:hover { background: #d32f2f; color: #fff; }
+
+    .hidden { display: none !important; }
+
+    /* ===== 削除確認ダイアログ（モーダルより前面） ===== */
+    .dialog-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      display: flex; justify-content: center; align-items: center; z-index: 200;
+    }
+    .dialog-overlay.hidden { display: none; }
+    .dialog { background: #fff; border-radius: var(--radius); padding: 28px; width: 360px; max-width: 90vw; box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+    .dialog-title { font-size: 1rem; font-weight: 700; margin-bottom: 12px; color: #d32f2f; }
+    .dialog-message { font-size: 0.95rem; margin-bottom: 6px; word-break: break-all; }
+    .dialog-task-name { font-weight: 700; }
+    .dialog-sub { font-size: 0.82rem; color: var(--color-text-light); margin-bottom: 24px; }
+    .dialog-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  </style>
+</head>
+<body>
+
+  <!-- ヘッダー -->
+  <header class="app-header">
+    <h1 class="app-title">タスク管理ボード</h1>
+    <p class="today-date" id="today-date"></p>
+  </header>
+
+  <!-- ボード -->
+  <main class="board" id="board">
+
+    <div class="column" data-status="todo">
+      <div class="column-header">
+        <div class="column-title-row">
+          <span class="column-title">やること</span>
+          <span class="task-count" id="count-todo">0</span>
+        </div>
+        <div class="sort-btns">
+          <button class="btn-sort" data-status="todo" data-sort="priority">優先度順</button>
+          <button class="btn-sort" data-status="todo" data-sort="due">期限順</button>
+        </div>
+      </div>
+      <div class="card-list" id="list-todo" data-status="todo"></div>
+      <button class="add-btn" data-status="todo">＋ タスクを追加</button>
+    </div>
+
+    <div class="column" data-status="doing">
+      <div class="column-header">
+        <div class="column-title-row">
+          <span class="column-title">進行中</span>
+          <span class="task-count" id="count-doing">0</span>
+        </div>
+        <div class="sort-btns">
+          <button class="btn-sort" data-status="doing" data-sort="priority">優先度順</button>
+          <button class="btn-sort" data-status="doing" data-sort="due">期限順</button>
+        </div>
+      </div>
+      <div class="card-list" id="list-doing" data-status="doing"></div>
+      <button class="add-btn" data-status="doing">＋ タスクを追加</button>
+    </div>
+
+    <div class="column" data-status="done">
+      <div class="column-header">
+        <div class="column-title-row">
+          <span class="column-title">完了</span>
+          <span class="task-count" id="count-done">0</span>
+        </div>
+        <div class="sort-btns">
+          <button class="btn-sort" data-status="done" data-sort="priority">優先度順</button>
+          <button class="btn-sort" data-status="done" data-sort="due">期限順</button>
+        </div>
+      </div>
+      <div class="card-list" id="list-done" data-status="done"></div>
+      <button class="add-btn" data-status="done">＋ タスクを追加</button>
+    </div>
+
+  </main>
+
+  <!-- タスクフォームモーダル -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal">
+      <div class="modal-title-row">
+        <h2 class="modal-heading" id="modal-heading">タスクを追加</h2>
+        <button class="btn-close" id="btn-close">×</button>
+      </div>
+      <form id="task-form" novalidate>
+        <div class="form-group">
+          <label for="input-title">タイトル <span class="required">*</span></label>
+          <input type="text" id="input-title" placeholder="例：レポートを仕上げる" maxlength="100">
+          <span class="error-msg hidden" id="error-title">タイトルを入力してください</span>
+        </div>
+        <div class="form-group">
+          <label for="input-desc">説明文</label>
+          <textarea id="input-desc" rows="3" maxlength="500" placeholder="タスクの詳細・メモ（任意）"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="input-priority">優先度 <span class="required">*</span></label>
+            <select id="input-priority">
+              <option value="high">高</option>
+              <option value="medium" selected>中</option>
+              <option value="low">低</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="input-due">期限</label>
+            <input type="date" id="input-due">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-danger hidden" id="btn-modal-delete">削除</button>
+          <div class="form-actions-right">
+            <button type="button" class="btn-cancel" id="btn-cancel">キャンセル</button>
+            <button type="submit" class="btn-primary">保存</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 削除確認ダイアログ -->
+  <div class="dialog-overlay hidden" id="delete-dialog">
+    <div class="dialog">
+      <h3 class="dialog-title">タスクを削除</h3>
+      <p class="dialog-message">「<span class="dialog-task-name" id="delete-task-name"></span>」を削除しますか？</p>
+      <p class="dialog-sub">削除したタスクは元に戻せません。</p>
+      <div class="dialog-actions">
+        <button class="btn-cancel" id="btn-dialog-cancel">キャンセル</button>
+        <button class="btn-danger" id="btn-dialog-confirm">削除する</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== 設定 =====
+    const PRIORITY_LABELS = { high: '高', medium: '中', low: '低' };
+    const PRIORITY_ORDER  = { high: 0, medium: 1, low: 2 };
+
+    // ===== サンプルデータ =====
+    function daysFromToday(n) {
+      const d = new Date();
+      d.setDate(d.getDate() + n);
+      return d.toISOString().slice(0, 10);
+    }
+
+    // tasks配列の並び順が画面の表示順を決める
+    let tasks = [
+      { id: '1', status: 'todo',  title: 'レポートを仕上げる', desc: '参考文献のまとめと結論のページが未完成。提出期限に間に合わせること。', priority: 'high',   dueDate: daysFromToday(-4) },
+      { id: '2', status: 'todo',  title: '読書をする',         desc: '「達人プログラマー」第3章まで読み進める。',                         priority: 'medium', dueDate: daysFromToday(4) },
+      { id: '3', status: 'todo',  title: '部屋を掃除する',     desc: '',                                                                 priority: 'low',    dueDate: '' },
+      { id: '4', status: 'doing', title: 'プレゼン資料を作る', desc: 'スライド10枚構成で、グラフのデータを最新版に更新する必要あり。',      priority: 'high',   dueDate: daysFromToday(4) },
+      { id: '5', status: 'done',  title: 'ミーティングの準備', desc: 'アジェンダの作成と参加者への事前共有を完了。',                      priority: 'medium', dueDate: '' },
+      { id: '6', status: 'done',  title: 'メールを送る',       desc: '',                                                                 priority: 'low',    dueDate: '' },
+    ];
+
+    // ===== 状態 =====
+    let editingId     = null;
+    let addingStatus  = null;
+    let pendingDelete = null;
+    let draggingId    = null;
+
+    // ===== ユーティリティ =====
+    function formatToday() {
+      const d = new Date();
+      const days = ['日','月','火','水','木','金','土'];
+      return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${days[d.getDay()]}）`;
+    }
+    function formatDate(s) {
+      if (!s) return '';
+      const [, m, d] = s.split('-');
+      return `${+m}/${+d}`;
+    }
+    function isOverdue(s) {
+      if (!s) return false;
+      const t = new Date(); t.setHours(0,0,0,0);
+      return new Date(s) < t;
+    }
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function generateId() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2);
+    }
+
+    // ===== 描画 =====
+    function renderBoard() {
+      ['todo','doing','done'].forEach(status => {
+        const list  = document.getElementById(`list-${status}`);
+        const count = document.getElementById(`count-${status}`);
+        const col   = tasks.filter(t => t.status === status);
+        list.innerHTML = '';
+        col.forEach(task => list.appendChild(createCardElement(task)));
+        count.textContent = col.length;
+      });
+    }
+
+    function createCardElement(task) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.id = task.id;
+      card.dataset.priority = task.priority;
+      card.setAttribute('draggable', true);
+
+      let dueHtml = '';
+      if (task.dueDate) {
+        const ov = isOverdue(task.dueDate);
+        dueHtml = `<span class="card-due ${ov ? 'overdue' : ''}">${ov ? '⚠ 期限切れ ' : '期限：'}${formatDate(task.dueDate)}</span>`;
+      }
+
+      card.innerHTML = `
+        <div class="card-body">
+          <div class="card-title">${escapeHtml(task.title)}</div>
+          ${task.desc ? `<div class="card-desc">${escapeHtml(task.desc)}</div>` : ''}
+          <div class="card-meta">
+            <span class="badge-priority ${task.priority}">${PRIORITY_LABELS[task.priority]}</span>
+            ${dueHtml}
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-edit"      data-id="${task.id}">編集</button>
+          <button class="btn-delete-sm" data-id="${task.id}">削除</button>
+        </div>
+      `;
+
+      card.querySelector('.card-body').addEventListener('click', () => openModal(task.status, task.id));
+      card.querySelector('.btn-edit').addEventListener('click', e => { e.stopPropagation(); openModal(task.status, task.id); });
+      card.querySelector('.btn-delete-sm').addEventListener('click', e => { e.stopPropagation(); openDeleteDialog(task.id); });
+
+      // ドラッグ開始
+      card.addEventListener('dragstart', e => {
+        draggingId = task.id;
+        requestAnimationFrame(() => card.classList.add('dragging'));
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', () => {
+        draggingId = null;
+        card.classList.remove('dragging');
+        cleanupDrag();
+      });
+
+      return card;
+    }
+
+    // ===== ドラッグ&ドロップ：ドロップ位置の計算 =====
+
+    // マウスのY座標からドロップ後に来るべき要素を返す（undefinedなら末尾）
+    function getDragAfterElement(cardList, mouseY) {
+      const cards = [...cardList.querySelectorAll('.card:not(.dragging)')];
+      return cards.reduce((closest, card) => {
+        const box    = card.getBoundingClientRect();
+        const offset = mouseY - box.top - box.height / 2;
+        // offsetが負 ＝ マウスはこのカードの上半分 → このカードの前に挿入
+        if (offset < 0 && offset > closest.offset) {
+          return { offset, element: card };
+        }
+        return closest;
+      }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    function cleanupDrag() {
+      document.querySelectorAll('.card-list').forEach(l => l.classList.remove('drag-over'));
+      const ph = document.querySelector('.drop-placeholder');
+      if (ph) ph.remove();
+    }
+
+    // ===== タスクのCRUD =====
+    function addTask(data) {
+      tasks.push({ id: generateId(), ...data });
+      renderBoard();
+    }
+    function updateTask(id, data) {
+      const i = tasks.findIndex(t => t.id === id);
+      if (i !== -1) tasks[i] = { ...tasks[i], ...data };
+      renderBoard();
+    }
+    function deleteTask(id) {
+      tasks = tasks.filter(t => t.id !== id);
+      renderBoard();
+    }
+
+    // 指定カラムのタスクをソートして tasks 配列を書き換える（一回限りの操作）
+    function sortColumn(status, by) {
+      const col   = tasks.filter(t => t.status === status);
+      const other = tasks.filter(t => t.status !== status);
+      if (col.length === 0) return;
+
+      const sorted = [...col].sort((a, b) => {
+        if (by === 'priority') return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+        if (by === 'due') {
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return a.dueDate.localeCompare(b.dueDate);
+        }
+        return 0;
+      });
+
+      // ソート済みカラムを元の位置（最初に登場するインデックス）に再挿入
+      const firstIdx = tasks.findIndex(t => t.status === status);
+      tasks = other;
+      tasks.splice(firstIdx, 0, ...sorted);
+      renderBoard();
+    }
+
+    // ===== モーダル =====
+    function openModal(status, taskId = null) {
+      editingId    = taskId;
+      addingStatus = taskId ? null : status;
+
+      const titleInput = document.getElementById('input-title');
+      const btnDelete  = document.getElementById('btn-modal-delete');
+      document.getElementById('error-title').classList.add('hidden');
+      titleInput.classList.remove('error-field');
+
+      if (taskId) {
+        const task = tasks.find(t => t.id === taskId);
+        document.getElementById('modal-heading').textContent = 'タスクを編集';
+        titleInput.value = task.title;
+        document.getElementById('input-desc').value     = task.desc || '';
+        document.getElementById('input-priority').value = task.priority;
+        document.getElementById('input-due').value      = task.dueDate || '';
+        btnDelete.classList.remove('hidden');
+      } else {
+        document.getElementById('modal-heading').textContent = 'タスクを追加';
+        document.getElementById('task-form').reset();
+        btnDelete.classList.add('hidden');
+      }
+
+      document.getElementById('modal-overlay').classList.remove('hidden');
+      titleInput.focus();
+    }
+
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.add('hidden');
+      editingId = null; addingStatus = null;
+    }
+
+    // ===== 削除確認ダイアログ =====
+    function openDeleteDialog(taskId) {
+      pendingDelete = taskId;
+      const task = tasks.find(t => t.id === taskId);
+      document.getElementById('delete-task-name').textContent = task.title;
+      document.getElementById('delete-dialog').classList.remove('hidden');
+    }
+    function closeDeleteDialog() {
+      document.getElementById('delete-dialog').classList.add('hidden');
+      pendingDelete = null;
+    }
+    function confirmDelete() {
+      if (!pendingDelete) return;
+      deleteTask(pendingDelete);
+      closeDeleteDialog();
+      closeModal();
+    }
+
+    // ===== イベント登録 =====
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('today-date').textContent = formatToday();
+      renderBoard();
+
+      const board = document.getElementById('board');
+
+      // ＋追加ボタン
+      document.querySelectorAll('.add-btn').forEach(btn => {
+        btn.addEventListener('click', () => openModal(btn.dataset.status));
+      });
+
+      // 並び替えボタン（クリックで一回ソート）
+      board.addEventListener('click', e => {
+        const btn = e.target.closest('.btn-sort');
+        if (!btn) return;
+        sortColumn(btn.dataset.status, btn.dataset.sort);
+      });
+
+      // ===== D&D：dragover でプレースホルダーを移動 =====
+      board.addEventListener('dragover', e => {
+        const cardList = e.target.closest('.card-list');
+        if (!cardList || !draggingId) return;
+        e.preventDefault();
+
+        // ハイライト更新
+        document.querySelectorAll('.card-list').forEach(l => l.classList.remove('drag-over'));
+        cardList.classList.add('drag-over');
+
+        // プレースホルダーを挿入位置に移動
+        const after = getDragAfterElement(cardList, e.clientY);
+        let ph = document.querySelector('.drop-placeholder');
+        if (!ph) {
+          ph = document.createElement('div');
+          ph.className = 'drop-placeholder';
+        }
+        if (!after) {
+          cardList.appendChild(ph);
+        } else {
+          cardList.insertBefore(ph, after);
+        }
+      });
+
+      // D&D：ボード外に出たらクリーンアップ
+      board.addEventListener('dragleave', e => {
+        if (!e.relatedTarget || !board.contains(e.relatedTarget)) {
+          cleanupDrag();
+        }
+      });
+
+      // ===== D&D：drop でタスク配列を書き換え =====
+      board.addEventListener('drop', e => {
+        const cardList = e.target.closest('.card-list');
+        if (!cardList || !draggingId) return;
+        e.preventDefault();
+
+        const ph        = document.querySelector('.drop-placeholder');
+        const newStatus = cardList.dataset.status;
+        const draggedTask = tasks.find(t => t.id === draggingId);
+
+        // プレースホルダーの直後のカードを確認（挿入位置を決める）
+        let insertBeforeId = null;
+        if (ph) {
+          const nextCard = ph.nextElementSibling;
+          if (nextCard && nextCard.classList.contains('card') && nextCard.dataset.id !== draggingId) {
+            insertBeforeId = nextCard.dataset.id;
+          }
+          ph.remove();
+        }
+
+        // tasks配列からドラッグ中のタスクを一時的に除外
+        tasks = tasks.filter(t => t.id !== draggingId);
+
+        if (insertBeforeId) {
+          // 指定カードの直前に挿入
+          const targetIdx = tasks.findIndex(t => t.id === insertBeforeId);
+          tasks.splice(targetIdx, 0, { ...draggedTask, status: newStatus });
+        } else {
+          // カラムの末尾に挿入（そのカラムの最後のタスクの直後）
+          let lastColIdx = -1;
+          tasks.forEach((t, i) => { if (t.status === newStatus) lastColIdx = i; });
+          tasks.splice(lastColIdx + 1, 0, { ...draggedTask, status: newStatus });
+        }
+
+        cleanupDrag();
+        renderBoard();
+      });
+
+      // フォーム送信
+      document.getElementById('task-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const titleInput = document.getElementById('input-title');
+        const title      = titleInput.value.trim();
+        if (!title) {
+          document.getElementById('error-title').classList.remove('hidden');
+          titleInput.classList.add('error-field');
+          titleInput.focus();
+          return;
+        }
+        const data = {
+          title,
+          desc:     document.getElementById('input-desc').value.trim(),
+          priority: document.getElementById('input-priority').value,
+          dueDate:  document.getElementById('input-due').value,
+        };
+        if (editingId) {
+          updateTask(editingId, data);
+        } else {
+          addTask({ ...data, status: addingStatus });
+        }
+        closeModal();
+      });
+
+      // タイトル入力中はエラーを消す
+      document.getElementById('input-title').addEventListener('input', () => {
+        document.getElementById('error-title').classList.add('hidden');
+        document.getElementById('input-title').classList.remove('error-field');
+      });
+
+      // モーダル閉じる
+      document.getElementById('btn-close').addEventListener('click', closeModal);
+      document.getElementById('btn-cancel').addEventListener('click', closeModal);
+      // 背景クリックでは閉じない（設計書：誤操作防止）
+
+      // モーダル内削除ボタン → ダイアログへ
+      document.getElementById('btn-modal-delete').addEventListener('click', () => {
+        if (editingId) openDeleteDialog(editingId);
+      });
+
+      // 削除確認ダイアログ
+      document.getElementById('btn-dialog-cancel').addEventListener('click', closeDeleteDialog);
+      document.getElementById('btn-dialog-confirm').addEventListener('click', confirmDelete);
+    });
+  </script>
+</body>
+</html>
