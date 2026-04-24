@@ -221,9 +221,32 @@ EOF
 > `required_pull_request_reviews` を設定することで、PR なしに main へマージできなくなる。
 > `required_approving_review_count: 0` はソロ開発向け（承認者不要、ただし PR 自体は必須）。
 
+**Note:** 個人リポジトリでは PR レビューの必須化ができない場合がある（GitHub Free 制限）。  
+その場合は `"required_pull_request_reviews": null` に変更し、CLAUDE.md のルールで運用カバーする。
+
 ---
 
-## 9. このファイルの更新ルール
+## 9. 検証方法
+
+セットアップ後に以下のコマンドで正しく設定されているか確認すること。
+
+```bash
+# 1. CLAUDE.md の内容確認
+cat CLAUDE.md
+
+# 2. ブランチ保護が有効か確認
+gh api repos/80-cloud/hideharu-AI/branches/main/protection | python3 -m json.tool
+
+# 3. ラベル一覧確認
+gh label list --repo 80-cloud/hideharu-AI
+```
+
+3 については、以降の作業で Claude Code がルールに従って動作するか実際に確認する。  
+（Issue 作成 → ブランチ作成 → 実装 → コミット → PR 作成 → マージ の順に実施）
+
+---
+
+## 10. このファイルの更新ルール
 
 - ルールを変更したい場合は、必ず Issue を立ててから PR 経由で変更すること
 - 直接編集してコミットしない
