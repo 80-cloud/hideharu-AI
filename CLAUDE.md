@@ -246,7 +246,47 @@ gh label list --repo 80-cloud/hideharu-AI
 
 ---
 
-## 10. このファイルの更新ルール
+## 10. ポート競合の扱い（Claude Code 必須ルール）
+
+### 使用ポート一覧
+
+| サービス | コマンド | ポート |
+|---|---|---|
+| Spring Boot（バックエンド） | `./gradlew bootRun` | **8080** |
+| Vite（フロントエンド） | `npm run dev` | **5173** |
+| PostgreSQL（DB） | `docker-compose up` | **5432** |
+
+### ルール
+
+1. **サーバー起動前に必ずポートの空きを確認すること**
+2. **ポートが使用中の場合は、そのプロセスを `kill -9` で強制終了してから起動すること**
+3. **別ポートでの代替起動は絶対禁止** — CORS 設定・Vite プロキシが崩れてアプリが動作しない
+
+### 理由
+
+- CORS 設定（`CorsConfig.java`）は `http://localhost:5173` のみ許可
+- Vite プロキシ（`vite.config.js`）は `http://localhost:8080` に転送
+- 上記以外のポートで起動すると API 通信が 100% 失敗する
+
+### 強制終了コマンド（手動で実行する場合）
+
+```bash
+# ポート 8080 を解放（バックエンド）
+lsof -ti :8080 | xargs kill -9 2>/dev/null; true
+
+# ポート 5173 を解放（フロントエンド）
+lsof -ti :5173 | xargs kill -9 2>/dev/null; true
+
+# ポート 5432 を解放（DB）
+lsof -ti :5432 | xargs kill -9 2>/dev/null; true
+```
+
+> **Claude Code 自動化:** `~/.claude/settings.json` の PreToolUse フックにより、
+> `bootRun` / `npm run dev` / `docker-compose up` を実行する直前に自動でポート競合を検知・解消する。
+
+---
+
+## 11. このファイルの更新ルール
 
 - ルールを変更したい場合は、必ず Issue を立ててから PR 経由で変更すること
 - 直接編集してコミットしない
