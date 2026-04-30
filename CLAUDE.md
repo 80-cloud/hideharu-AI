@@ -149,22 +149,30 @@ Issue・PR には必ずラベルを付けること。
 
 ## 7. 技術スタック補足（Claude Code 向け）
 
-### バックエンド起動
+### サービス起動（起動順を守ること）
 
 ```bash
-# PostgreSQL を Docker で起動
+# ① PostgreSQL を Docker で起動
 cd /Users/macmini/Desktop/Cursor/task-board
 docker-compose up -d
 
-# Spring Boot を起動（Gradle）
+# ② Spring Boot を起動（Gradle）
 cd /Users/macmini/Desktop/Cursor/task-board/backend
 ./gradlew bootRun
+
+# ③ React フロントエンドを起動（Vite）
+cd /Users/macmini/Desktop/Cursor/task-board/frontend
+npm run dev
 ```
+
+> ポート競合が発生した場合はセクション10のルールに従うこと。
 
 ### ビルドツール
 
 - バックエンド: **Gradle**（`build.gradle` を使用）
-- ビルドファイル: `/Users/macmini/Desktop/Cursor/task-board/backend/build.gradle`
+  - ビルドファイル: `task-board/backend/build.gradle`
+- フロントエンド: **Node.js v25 / npm / Vite**（`package.json` を使用）
+  - ビルドファイル: `task-board/frontend/package.json`
 
 ### ファイル構成
 
@@ -178,18 +186,43 @@ cd /Users/macmini/Desktop/Cursor/task-board/backend
 │   │   └── feature_request.md
 │   └── pull_request_template.md
 └── task-board/
-    ├── index.html               ← フロントエンド (v1.0)
-    ├── style.css
-    ├── app.js
-    ├── prototype.html
+    ├── index.html               ← フロントエンド v1.0（旧）
+    ├── style.css                ← フロントエンド v1.0（旧）
+    ├── app.js                   ← フロントエンド v1.0（旧）
+    ├── prototype.html           ← プロトタイプ（旧）
     ├── 要件定義書.md
     ├── docker-compose.yml       ← PostgreSQL 起動
     ├── docs/
     │   ├── 画面設計書.md
     │   ├── DB設計書.md
     │   └── 技術スタック.md
+    ├── frontend/                ← React フロントエンド v2.0（現行）
+    │   ├── index.html
+    │   ├── vite.config.js
+    │   ├── package.json
+    │   └── src/
+    │       ├── main.jsx
+    │       ├── App.jsx
+    │       ├── api/taskApi.js
+    │       ├── components/
+    │       │   ├── Header.jsx
+    │       │   ├── Board.jsx
+    │       │   ├── Column.jsx
+    │       │   └── TaskCard.jsx
+    │       ├── context/TaskContext.jsx
+    │       └── utils/dateUtils.js
     └── backend/                 ← Spring Boot (Java 21)
-        └── build.gradle
+        ├── build.gradle
+        └── src/main/java/com/taskboard/
+            ├── config/CorsConfig.java
+            ├── domain/task/
+            │   ├── Task.java
+            │   ├── TaskController.java
+            │   ├── TaskRepository.java
+            │   └── TaskService.java
+            └── exception/
+                ├── GlobalExceptionHandler.java
+                └── TaskNotFoundException.java
 ```
 
 ---
