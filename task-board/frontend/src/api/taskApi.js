@@ -5,3 +5,8 @@ export async function fetchAllTasks() {
   const response = await axios.get('/api/tasks')
   return response.data
 }
+
+export async function fetchTasksByStatus(status) {
+  const response = await axios.get(`/api/tasks?status=${status}`)
+  return response.data
+}
