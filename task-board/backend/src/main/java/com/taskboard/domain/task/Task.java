@@ -26,4 +26,16 @@ public class Task {
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    public static Task from(TaskRequest request) {
+        Task task = new Task();
+        task.title = request.getTitle();
+        task.description = request.getDescription();
+        task.priority = request.getPriority();
+        task.dueDate = request.getDueDate();
+        task.status = request.getStatus() != null ? request.getStatus() : "todo";
+        task.createdAt = LocalDateTime.now();
+        task.updatedAt = LocalDateTime.now();
+        return task;
+    }
 }

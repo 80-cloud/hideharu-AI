@@ -10,3 +10,8 @@ export async function fetchTasksByStatus(status) {
   const response = await axios.get(`/api/tasks?status=${status}`)
   return response.data
 }
+
+export async function createTask(data) {
+  const response = await axios.post('/api/tasks', data)
+  return response.data
+}
