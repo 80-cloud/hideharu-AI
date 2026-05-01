@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react'
-import { fetchAllTasks, createTask as apiCreateTask } from '../api/taskApi'
+import { fetchAllTasks, createTask as apiCreateTask, updateTask as apiUpdateTask, deleteTask as apiDeleteTask } from '../api/taskApi'
 
 const TaskContext = createContext(null)
 
@@ -22,6 +22,16 @@ export function TaskProvider({ children }) {
     setAllTasks(prev => [...prev, created])
   }
 
+  async function updateTask(id, data) {
+    const updated = await apiUpdateTask(id, data)
+    setAllTasks(prev => prev.map(t => t.id === id ? updated : t))
+  }
+
+  async function deleteTask(id) {
+    await apiDeleteTask(id)
+    setAllTasks(prev => prev.filter(t => t.id !== id))
+  }
+
   const tasks = useMemo(() => {
     return allTasks
       .filter(t => statusFilter === 'all' || t.status === statusFilter)
@@ -36,7 +46,7 @@ export function TaskProvider({ children }) {
   }, [allTasks, searchQuery, statusFilter])
 
   return (
-    <TaskContext.Provider value={{ tasks, loading, error, searchQuery, setSearchQuery, statusFilter, setStatusFilter, addTask }}>
+    <TaskContext.Provider value={{ tasks, loading, error, searchQuery, setSearchQuery, statusFilter, setStatusFilter, addTask, updateTask, deleteTask }}>
       {children}
     </TaskContext.Provider>
   )

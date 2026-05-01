@@ -34,4 +34,15 @@ public class TaskController {
     public Task createTask(@Valid @RequestBody TaskRequest request) {
         return taskService.createTask(request);
     }
+
+    @PutMapping("/{id}")
+    public Task updateTask(@PathVariable Integer id, @Valid @RequestBody TaskRequest request) {
+        return taskService.updateTask(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteTask(@PathVariable Integer id) {
+        taskService.deleteTask(id);
+    }
 }
