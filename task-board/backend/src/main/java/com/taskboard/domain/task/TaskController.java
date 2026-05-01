@@ -1,5 +1,6 @@
 package com.taskboard.domain.task;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -30,7 +31,7 @@ public class TaskController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Task createTask(@RequestBody TaskRequest request) {
+    public Task createTask(@Valid @RequestBody TaskRequest request) {
         return taskService.createTask(request);
     }
 }
