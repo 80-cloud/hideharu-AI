@@ -3,6 +3,7 @@ package com.taskboard.domain.task;
 import com.taskboard.exception.TaskNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -26,5 +27,17 @@ public class TaskService {
 
     public Task createTask(TaskRequest request) {
         return taskRepository.save(Task.from(request));
+    }
+
+    @Transactional
+    public Task updateTask(Integer id, TaskRequest request) {
+        Task task = getTaskById(id);
+        task.update(request);
+        return taskRepository.save(task);
+    }
+
+    public void deleteTask(Integer id) {
+        Task task = getTaskById(id);
+        taskRepository.delete(task);
     }
 }

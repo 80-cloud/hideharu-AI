@@ -1,17 +1,19 @@
 import { useState } from 'react'
 import { useTaskContext } from '../context/TaskContext'
 
-const INITIAL_FORM = {
-  title: '',
-  description: '',
-  priority: 'medium',
-  dueDate: '',
-  status: 'todo',
-}
+function TaskFormModal({ onClose, task = null, initialStatus = 'todo' }) {
+  const { addTask, updateTask } = useTaskContext()
+  const isEdit = task !== null
 
-function TaskFormModal({ onClose }) {
-  const { addTask } = useTaskContext()
-  const [form, setForm] = useState(INITIAL_FORM)
+  const [form, setForm] = useState(isEdit ? {
+    title:       task.title,
+    description: task.description ?? '',
+    priority:    task.priority ?? 'medium',
+    dueDate:     task.dueDate ?? '',
+    status:      task.status,
+  } : {
+    title: '', description: '', priority: 'medium', dueDate: '', status: initialStatus,
+  })
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
 
@@ -29,13 +31,18 @@ function TaskFormModal({ onClose }) {
     setSubmitting(true)
     setFormError('')
     try {
-      await addTask({
-        title: form.title.trim(),
+      const data = {
+        title:       form.title.trim(),
         description: form.description.trim() || null,
-        priority: form.priority,
-        dueDate: form.dueDate || null,
-        status: form.status,
-      })
+        priority:    form.priority,
+        dueDate:     form.dueDate || null,
+        status:      form.status,
+      }
+      if (isEdit) {
+        await updateTask(task.id, data)
+      } else {
+        await addTask(data)
+      }
       onClose()
     } catch (err) {
       const msg = err?.response?.data?.message
@@ -52,13 +59,10 @@ function TaskFormModal({ onClose }) {
     >
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-gray-800">新規タスクを登録</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
-          >
-            ✕
-          </button>
+          <h2 className="text-lg font-bold text-gray-800">
+            {isEdit ? 'タスクを編集' : '新規タスクを登録'}
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -131,9 +135,7 @@ function TaskFormModal({ onClose }) {
             />
           </div>
 
-          {formError && (
-            <p className="text-sm text-red-500">{formError}</p>
-          )}
+          {formError && <p className="text-sm text-red-500">{formError}</p>}
 
           <div className="flex justify-end gap-3 pt-2">
             <button
@@ -148,7 +150,7 @@ function TaskFormModal({ onClose }) {
               disabled={submitting}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
-              {submitting ? '登録中...' : '登録する'}
+              {submitting ? (isEdit ? '更新中...' : '登録中...') : (isEdit ? '更新する' : '登録する')}
             </button>
           </div>
         </form>

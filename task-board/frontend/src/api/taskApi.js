@@ -15,3 +15,12 @@ export async function createTask(data) {
   const response = await axios.post('/api/tasks', data)
   return response.data
 }
+
+export async function updateTask(id, data) {
+  const response = await axios.put(`/api/tasks/${id}`, data)
+  return response.data
+}
+
+export async function deleteTask(id) {
+  await axios.delete(`/api/tasks/${id}`)
+}

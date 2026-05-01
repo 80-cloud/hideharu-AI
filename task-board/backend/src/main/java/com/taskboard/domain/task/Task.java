@@ -38,4 +38,13 @@ public class Task {
         task.updatedAt = LocalDateTime.now();
         return task;
     }
+
+    public void update(TaskRequest request) {
+        this.title = request.getTitle();
+        this.description = request.getDescription();
+        this.priority = request.getPriority();
+        this.dueDate = request.getDueDate();
+        this.status = request.getStatus() != null ? request.getStatus() : this.status;
+        this.updatedAt = LocalDateTime.now();
+    }
 }
