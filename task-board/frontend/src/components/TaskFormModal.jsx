@@ -37,8 +37,9 @@ function TaskFormModal({ onClose }) {
         status: form.status,
       })
       onClose()
-    } catch {
-      setFormError('登録に失敗しました。もう一度お試しください。')
+    } catch (err) {
+      const msg = err?.response?.data?.message
+      setFormError(msg ?? 'ネットワークエラーが発生しました。バックエンドが起動しているか確認してください。')
     } finally {
       setSubmitting(false)
     }
