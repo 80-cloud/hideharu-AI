@@ -1,6 +1,8 @@
 package com.taskboard.domain.task;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,5 +27,11 @@ public class TaskController {
     @GetMapping("/status/{status}")
     public List<Task> getTasksByStatus(@PathVariable String status) {
         return taskService.getAllTasks(status);
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public Task createTask(@Valid @RequestBody TaskRequest request) {
+        return taskService.createTask(request);
     }
 }

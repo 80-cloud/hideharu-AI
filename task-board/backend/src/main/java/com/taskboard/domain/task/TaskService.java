@@ -23,4 +23,8 @@ public class TaskService {
         return taskRepository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException(id));
     }
+
+    public Task createTask(TaskRequest request) {
+        return taskRepository.save(Task.from(request));
+    }
 }
