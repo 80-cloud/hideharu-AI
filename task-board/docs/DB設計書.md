@@ -2,7 +2,8 @@
 
 **プロジェクト名：** タスク管理ボード  
 **作成日：** 2026年4月25日  
-**バージョン：** 1.0  
+**最終更新日：** 2026年5月2日  
+**バージョン：** 2.0  
 **作成者：** ○○（開発担当）
 
 > 本ドキュメントは [要件定義書](../要件定義書.md) からデータ設計に関する内容を分離したものです。
@@ -11,48 +12,49 @@
 
 ## 目次
 
-1. [現バージョンのデータ構造（localStorage）](#1-現バージョンのデータ構造localstorage)
+1. [現バージョンのデータ構造（PostgreSQL）](#1-現バージョンのデータ構造postgresql)
 2. [各項目の説明](#2-各項目の説明)
 3. [ステータスと表示カラムの対応](#3-ステータスと表示カラムの対応)
 4. [データの保存先](#4-データの保存先)
-5. [ER図（将来のDB設計）](#5-er図将来のdb設計)
+5. [ER図（現行DB設計）](#5-er図現行db設計)
 6. [テーブル定義（詳細）](#6-テーブル定義詳細)
 7. [インデックス定義](#7-インデックス定義)
 8. [制約定義](#8-制約定義)
 
 ---
 
-## 1. 現バージョンのデータ構造（localStorage）
+## 1. 現バージョンのデータ構造（PostgreSQL）
 
-ブラウザの localStorage に以下の形式でデータを保存する。
+PostgreSQL の `tasks` テーブルに以下のカラム構成でデータを保存する。  
+テーブル定義は Flyway マイグレーション（`V1__create_initial_tables.sql`）で管理されている。
 
-```json
-[
-  {
-    "id":        "一意のID（自動生成・例：task_1714000000000）",
-    "title":     "タスクのタイトル（最大100文字）",
-    "desc":      "説明文（空でも可・最大500文字）",
-    "priority":  "high / medium / low のいずれか",
-    "dueDate":   "2026-04-30（任意・空の場合は空文字）",
-    "status":    "todo / doing / done のいずれか",
-    "createdAt": "2026-04-23T10:00:00.000Z（作成日時・自動記録）"
-  }
-]
+```sql
+CREATE TABLE tasks (
+    id          SERIAL PRIMARY KEY,
+    title       VARCHAR(100) NOT NULL,
+    description TEXT,
+    priority    VARCHAR(10) NOT NULL CHECK (priority IN ('high', 'medium', 'low')),
+    due_date    DATE,
+    status      VARCHAR(20) NOT NULL DEFAULT 'todo' CHECK (status IN ('todo', 'doing', 'done')),
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 ---
 
 ## 2. 各項目の説明
 
-| 項目名 | 日本語の意味 | 必須 | 取りうる値 |
-|---|---|---|---|
-| id | タスクを識別するための番号 | ○ | 自動生成（重複しない） |
-| title | タスクのタイトル | ○ | 文字列（最大100文字） |
-| desc | タスクの説明文 | — | 文字列（最大500文字）または空 |
-| priority | 優先度 | ○ | `high`（高）/ `medium`（中）/ `low`（低） |
-| dueDate | 期限日 | — | `YYYY-MM-DD`形式または空 |
-| status | タスクの状態（カラム） | ○ | `todo` / `doing` / `done` |
-| createdAt | タスクを作成した日時 | ○ | 日時（自動記録） |
+| カラム名（DB） | フィールド名（API） | 日本語の意味 | 必須 | 取りうる値 |
+|---|---|---|---|---|
+| id | id | タスクを識別するための番号 | ○ | 自動採番（1以上の整数） |
+| title | title | タスクのタイトル | ○ | 文字列（最大100文字） |
+| description | description | タスクの説明文 | — | 文字列（最大500文字）または NULL |
+| priority | priority | 優先度 | ○ | `high`（高）/ `medium`（中）/ `low`（低） |
+| due_date | dueDate | 期限日 | — | `YYYY-MM-DD`形式または NULL |
+| status | status | タスクの状態（カラム） | ○ | `todo` / `doing` / `done` |
+| created_at | createdAt | タスクを作成した日時 | ○ | 日時（自動記録） |
+| updated_at | updatedAt | 最終更新日時 | ○ | 日時（更新のたびに自動記録） |
 
 ---
 
@@ -70,119 +72,48 @@
 
 | 項目 | 内容 |
 |---|---|
-| 保存場所 | ブラウザの localStorage（`taskboard_tasks`というキー名で保存） |
-| 保存タイミング | タスクの追加・編集・削除・移動のたびに自動保存 |
-| 読み込みタイミング | ページを開いたとき（ブラウザ起動時） |
+| 保存場所 | PostgreSQL 16（Docker コンテナ）/ データベース名: `taskboard` / テーブル名: `tasks` |
+| 保存タイミング | タスクの追加・更新・削除のたびに REST API 経由でDBに書き込まれる |
+| 読み込みタイミング | ページを開いたとき（`GET /api/tasks` を呼び出し） |
+| マイグレーション管理 | Flyway（`db/migration/` 配下のSQLファイルで管理） |
 
 ---
 
-## 5. ER図（将来のDB設計）
+## 5. ER図（現行DB設計）
 
-### 将来バージョンで追加されるテーブル
-
-| テーブル名 | 日本語の意味 | 役割 |
-|---|---|---|
-| users | ユーザー | ログインする人の情報（名前・メール・パスワード） |
-| boards | ボード | ユーザーが持つタスクボード（複数作れる） |
-| columns | カラム | ボード内の列（やること・進行中・完了） |
-| tasks | タスク | カラムに入るタスクカードの情報 |
-
-### ER図
+現バージョン（v2.0）は単一の `tasks` テーブルで構成されている。  
+将来のバージョンでユーザー管理・複数ボード対応を追加する場合は、別途ER図を作成する。
 
 ```mermaid
 erDiagram
-    users {
-        int         id           PK  "主キー（自動採番）"
-        varchar     name             "ユーザー名"
-        varchar     email        UK  "メールアドレス（重複不可）"
-        varchar     password_hash    "パスワード（暗号化して保存）"
-        datetime    created_at       "アカウント作成日時"
-        datetime    updated_at       "最終更新日時"
-    }
-
-    boards {
-        int         id           PK  "主キー（自動採番）"
-        int         user_id      FK  "作成したユーザーのID"
-        varchar     name             "ボード名"
-        datetime    created_at       "作成日時"
-        datetime    updated_at       "最終更新日時"
-    }
-
-    columns {
-        int         id           PK  "主キー（自動採番）"
-        int         board_id     FK  "所属するボードのID"
-        varchar     name             "カラム名（例：やること）"
-        int         position         "表示順（左から0・1・2…）"
-        datetime    created_at       "作成日時"
-        datetime    updated_at       "最終更新日時"
-    }
-
     tasks {
-        int         id           PK  "主キー（自動採番）"
-        int         column_id    FK  "所属するカラムのID"
-        varchar     title            "タイトル（最大100文字）"
-        text        description      "説明文（最大500文字・空可）"
-        enum        priority         "優先度（high / medium / low）"
-        date        due_date         "期限日（空可）"
-        int         position         "カラム内の表示順（上から0・1・2…）"
-        datetime    created_at       "作成日時"
-        datetime    updated_at       "最終更新日時"
+        serial      id           PK  "主キー（自動採番）"
+        varchar100  title            "タイトル（NOT NULL）"
+        text        description      "説明文（NULL可）"
+        varchar10   priority         "優先度（high/medium/low, NOT NULL）"
+        date        due_date         "期限日（NULL可）"
+        varchar20   status           "ステータス（todo/doing/done, NOT NULL, DEFAULT todo）"
+        timestamp   created_at       "作成日時（NOT NULL）"
+        timestamp   updated_at       "最終更新日時（NOT NULL）"
     }
-
-    users  ||--o{ boards  : "1人が複数のボードを作成できる"
-    boards ||--o{ columns : "1つのボードが複数のカラムを持つ"
-    columns ||--o{ tasks  : "1つのカラムが複数のタスクを含む"
 ```
 
 ---
 
 ## 6. テーブル定義（詳細）
 
-### usersテーブル（ユーザー情報）
-
-| 列名 | データ型 | 必須 | 制約 | 説明 |
-|---|---|---|---|---|
-| id | INT | ○ | 主キー・自動採番 | ユーザーを識別する番号 |
-| name | VARCHAR(100) | ○ | — | ユーザー名（最大100文字） |
-| email | VARCHAR(255) | ○ | 重複不可（UNIQUE） | ログインに使うメールアドレス |
-| password_hash | VARCHAR(255) | ○ | — | パスワードを暗号化した文字列（平文では保存しない） |
-| created_at | DATETIME | ○ | 自動入力 | アカウント作成日時 |
-| updated_at | DATETIME | ○ | 自動更新 | 最終更新日時 |
-
-### boardsテーブル（ボード情報）
-
-| 列名 | データ型 | 必須 | 制約 | 説明 |
-|---|---|---|---|---|
-| id | INT | ○ | 主キー・自動採番 | ボードを識別する番号 |
-| user_id | INT | ○ | 外部キー（users.id） | このボードを作ったユーザーのID |
-| name | VARCHAR(100) | ○ | — | ボード名（最大100文字） |
-| created_at | DATETIME | ○ | 自動入力 | 作成日時 |
-| updated_at | DATETIME | ○ | 自動更新 | 最終更新日時 |
-
-### columnsテーブル（カラム情報）
-
-| 列名 | データ型 | 必須 | 制約 | 説明 |
-|---|---|---|---|---|
-| id | INT | ○ | 主キー・自動採番 | カラムを識別する番号 |
-| board_id | INT | ○ | 外部キー（boards.id） | このカラムが属するボードのID |
-| name | VARCHAR(100) | ○ | — | カラム名（例：やること） |
-| position | INT | ○ | 0以上の整数 | 左から何番目に表示するか（0始まり） |
-| created_at | DATETIME | ○ | 自動入力 | 作成日時 |
-| updated_at | DATETIME | ○ | 自動更新 | 最終更新日時 |
-
 ### tasksテーブル（タスク情報）
 
-| 列名 | データ型 | 必須 | 制約 | 説明 |
+| カラム名 | データ型 | 必須 | 制約 | 説明 |
 |---|---|---|---|---|
-| id | INT | ○ | 主キー・自動採番 | タスクを識別する番号 |
-| column_id | INT | ○ | 外部キー（columns.id） | このタスクが属するカラムのID |
-| title | VARCHAR(100) | ○ | — | タスクのタイトル（最大100文字） |
-| description | TEXT | — | NULL可 | タスクの説明文（最大500文字） |
-| priority | ENUM | ○ | high / medium / low のいずれか | 優先度 |
-| due_date | DATE | — | NULL可 | 期限日（未設定の場合は空） |
-| position | INT | ○ | 0以上の整数 | カラム内の表示順（上から0始まり） |
-| created_at | DATETIME | ○ | 自動入力 | タスク作成日時 |
-| updated_at | DATETIME | ○ | 自動更新 | 最終更新日時 |
+| id | SERIAL | ○ | 主キー・自動採番 | タスクを識別する番号（1から自動増加） |
+| title | VARCHAR(100) | ○ | NOT NULL | タスクのタイトル（最大100文字） |
+| description | TEXT | — | NULL可 | タスクの説明文（長さ制限なし・アプリ側で500文字まで制限） |
+| priority | VARCHAR(10) | ○ | NOT NULL、CHECK制約 | 優先度（high / medium / low のいずれか） |
+| due_date | DATE | — | NULL可 | 期限日（未設定の場合はNULL） |
+| status | VARCHAR(20) | ○ | NOT NULL、DEFAULT 'todo'、CHECK制約 | タスクの状態（todo / doing / done のいずれか） |
+| created_at | TIMESTAMP | ○ | NOT NULL、DEFAULT CURRENT_TIMESTAMP | タスク作成日時（自動設定） |
+| updated_at | TIMESTAMP | ○ | NOT NULL、DEFAULT CURRENT_TIMESTAMP | 最終更新日時（更新時にアプリ側で設定） |
 
 ---
 
@@ -190,11 +121,10 @@ erDiagram
 
 ### tasksテーブルのインデックス
 
-| インデックス名 | カラム | 用途 |
-|---|---|---|
-| PRIMARY | id | 主キー |
-| idx_tasks_status | status | ステータスによるタスク取得の高速化 |
-| idx_tasks_status_position | status, position | カラム内の表示順でのソート高速化 |
+| インデックス名 | カラム | 用途 | Flyway |
+|---|---|---|---|
+| PRIMARY | id | 主キー | V1 |
+| idx_tasks_status | status | ステータスによるタスク取得の高速化 | V3 |
 
 ---
 
@@ -202,18 +132,7 @@ erDiagram
 
 ### tasksテーブルの制約
 
-- `priority` は `'high'` / `'medium'` / `'low'` のいずれかの値をとる
-- `status` は `'todo'` / `'doing'` / `'done'` のいずれかの値をとる
-- `title` は空文字（NULL）を許可しない
-
----
-
-### テーブル間の外部キー制約
-
-```
-users（ユーザー）
-  └── boards（ボード）      ← user_id で users.id を参照
-        └── columns（カラム）  ← board_id で boards.id を参照
-              └── tasks（タスク）  ← column_id で columns.id を参照
-```
-
+- `priority` は `'high'` / `'medium'` / `'low'` のいずれかの値をとる（DBのCHECK制約 + バックエンドの@Pattern検証で二重チェック）
+- `status` は `'todo'` / `'doing'` / `'done'` のいずれかの値をとる（DBのCHECK制約 + バックエンドの@Pattern検証で二重チェック）
+- `title` は空文字（NULL）を許可しない（DBのNOT NULL制約 + バックエンドの@NotBlank検証で二重チェック）
+- `id` は1以上の整数のみ有効（バックエンドの@Min(1)検証 + フロントエンドのassertPositiveIntで二重チェック）

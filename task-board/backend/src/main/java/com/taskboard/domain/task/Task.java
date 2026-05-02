@@ -19,12 +19,25 @@ public class Task {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Column(nullable = false, length = 100)
     private String title;
+
+    @Column(columnDefinition = "TEXT")
     private String description;
+
+    @Column(nullable = false, length = 10)
     private String priority;
+
+    @Column(name = "due_date")
     private LocalDate dueDate;
+
+    @Column(nullable = false, length = 20)
     private String status;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     public static Task from(TaskRequest request) {

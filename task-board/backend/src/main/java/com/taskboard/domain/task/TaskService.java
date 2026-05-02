@@ -25,6 +25,7 @@ public class TaskService {
                 .orElseThrow(() -> new TaskNotFoundException(id));
     }
 
+    @Transactional
     public Task createTask(TaskRequest request) {
         return taskRepository.save(Task.from(request));
     }
@@ -36,6 +37,7 @@ public class TaskService {
         return taskRepository.save(task);
     }
 
+    @Transactional
     public void deleteTask(Integer id) {
         Task task = getTaskById(id);
         taskRepository.delete(task);
