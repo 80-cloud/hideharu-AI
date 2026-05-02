@@ -122,13 +122,15 @@ function TaskCard({ task }) {
           )}
 
           <div className="flex items-center justify-between gap-1 pt-1 border-t border-gray-100">
-            <button
-              onClick={handleStatusChange}
-              disabled={moving}
-              className="text-xs text-blue-600 hover:text-blue-800 font-medium disabled:opacity-40 truncate"
-            >
-              {moving ? '移動中...' : `→ ${nextStatus.label}`}
-            </button>
+            {nextStatus && (
+              <button
+                onClick={handleStatusChange}
+                disabled={moving}
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium disabled:opacity-40 truncate"
+              >
+                {moving ? '移動中...' : `→ ${nextStatus.label}`}
+              </button>
+            )}
 
             <div className="flex gap-1 flex-shrink-0">
               <button

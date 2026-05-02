@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react'
+import { createContext, useCallback, useContext, useState, useEffect, useMemo } from 'react'
 import { fetchAllTasks, createTask as apiCreateTask, updateTask as apiUpdateTask, deleteTask as apiDeleteTask } from '../api/taskApi'
 
 const TaskContext = createContext(null)
@@ -12,25 +12,25 @@ export function TaskProvider({ children }) {
 
   useEffect(() => {
     fetchAllTasks()
-      .then(data => setAllTasks(data))
+      .then(data => setAllTasks(Array.isArray(data) ? data : []))
       .catch(() => setError('タスクの取得に失敗しました。バックエンドが起動しているか確認してください。'))
       .finally(() => setLoading(false))
   }, [])
 
-  async function addTask(data) {
+  const addTask = useCallback(async (data) => {
     const created = await apiCreateTask(data)
     setAllTasks(prev => [...prev, created])
-  }
+  }, [])
 
-  async function updateTask(id, data) {
+  const updateTask = useCallback(async (id, data) => {
     const updated = await apiUpdateTask(id, data)
     setAllTasks(prev => prev.map(t => t.id === id ? updated : t))
-  }
+  }, [])
 
-  async function deleteTask(id) {
+  const deleteTask = useCallback(async (id) => {
     await apiDeleteTask(id)
     setAllTasks(prev => prev.filter(t => t.id !== id))
-  }
+  }, [])
 
   const tasks = useMemo(() => {
     return allTasks
@@ -45,8 +45,15 @@ export function TaskProvider({ children }) {
       })
   }, [allTasks, searchQuery, statusFilter])
 
+  const contextValue = useMemo(() => ({
+    tasks, loading, error,
+    searchQuery, setSearchQuery,
+    statusFilter, setStatusFilter,
+    addTask, updateTask, deleteTask,
+  }), [tasks, loading, error, searchQuery, statusFilter, addTask, updateTask, deleteTask])
+
   return (
-    <TaskContext.Provider value={{ tasks, loading, error, searchQuery, setSearchQuery, statusFilter, setStatusFilter, addTask, updateTask, deleteTask }}>
+    <TaskContext.Provider value={contextValue}>
       {children}
     </TaskContext.Provider>
   )

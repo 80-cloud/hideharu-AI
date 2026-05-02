@@ -1,12 +1,15 @@
 package com.taskboard.domain.task;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Validated
 @RestController
 @RequestMapping("/api/tasks")
 @RequiredArgsConstructor
@@ -20,13 +23,8 @@ public class TaskController {
     }
 
     @GetMapping("/{id}")
-    public Task getTaskById(@PathVariable Integer id) {
+    public Task getTaskById(@PathVariable @Min(1) Integer id) {
         return taskService.getTaskById(id);
-    }
-
-    @GetMapping("/status/{status}")
-    public List<Task> getTasksByStatus(@PathVariable String status) {
-        return taskService.getAllTasks(status);
     }
 
     @PostMapping
@@ -36,13 +34,13 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    public Task updateTask(@PathVariable Integer id, @Valid @RequestBody TaskRequest request) {
+    public Task updateTask(@PathVariable @Min(1) Integer id, @Valid @RequestBody TaskRequest request) {
         return taskService.updateTask(id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteTask(@PathVariable Integer id) {
+    public void deleteTask(@PathVariable @Min(1) Integer id) {
         taskService.deleteTask(id);
     }
 }
