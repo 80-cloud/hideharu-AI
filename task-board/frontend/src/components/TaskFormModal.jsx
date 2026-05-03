@@ -1,5 +1,13 @@
 import { useState } from 'react'
 import { useTaskContext } from '../context/TaskContext'
+import { useAutoSave } from '../hooks/useAutoSave'
+
+const STATUS_CONFIG = {
+  idle:   { text: '',          className: '' },
+  saving: { text: '保存中...',  className: 'text-gray-400 dark:text-gray-500' },
+  saved:  { text: '✓ 保存済み', className: 'text-green-500 dark:text-green-400' },
+  error:  { text: '⚠ 保存失敗', className: 'text-red-500 dark:text-red-400' },
+}
 
 function TaskFormModal({ onClose, task = null, initialStatus = 'todo' }) {
   const { addTask, updateTask } = useTaskContext()
@@ -16,6 +24,21 @@ function TaskFormModal({ onClose, task = null, initialStatus = 'todo' }) {
   })
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
+
+  async function autoSaveFn(currentForm) {
+    if (!isEdit) return // 新規はマニュアル保存のみ（IDがないためAPI保存不可）
+    const data = {
+      title:       currentForm.title.trim(),
+      description: currentForm.description.trim() || null,
+      priority:    currentForm.priority,
+      dueDate:     currentForm.dueDate || null,
+      status:      currentForm.status,
+    }
+    await updateTask(task.id, data)
+  }
+
+  const { saveStatus } = useAutoSave(form, isEdit, task?.id, autoSaveFn)
+  const statusIndicator = STATUS_CONFIG[saveStatus]
 
   function handleChange(e) {
     const { name, value } = e.target
@@ -56,15 +79,22 @@ function TaskFormModal({ onClose, task = null, initialStatus = 'todo' }) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4 p-6 transition-colors duration-200">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 transition-colors duration-200">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
             {isEdit ? 'タスクを編集' : '新規タスクを登録'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none">✕</button>
+          <div className="flex items-center gap-2">
+            {isEdit && saveStatus !== 'idle' && (
+              <span className={`text-xs ${statusIndicator.className}`}>
+                {statusIndicator.text}
+              </span>
+            )}
+            <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none p-1">✕</button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -99,12 +129,7 @@ function TaskFormModal({ onClose, task = null, initialStatus = 'todo' }) {
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">優先度</label>
-              <select
-                name="priority"
-                value={form.priority}
-                onChange={handleChange}
-                className={inputClass}
-              >
+              <select name="priority" value={form.priority} onChange={handleChange} className={inputClass}>
                 <option value="high">高</option>
                 <option value="medium">中</option>
                 <option value="low">低</option>
@@ -113,12 +138,7 @@ function TaskFormModal({ onClose, task = null, initialStatus = 'todo' }) {
 
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ステータス</label>
-              <select
-                name="status"
-                value={form.status}
-                onChange={handleChange}
-                className={inputClass}
-              >
+              <select name="status" value={form.status} onChange={handleChange} className={inputClass}>
                 <option value="todo">やること</option>
                 <option value="doing">進行中</option>
                 <option value="done">完了</option>
@@ -143,14 +163,14 @@ function TaskFormModal({ onClose, task = null, initialStatus = 'todo' }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 min-h-[44px]"
             >
               キャンセル
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-700 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-700 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 min-h-[44px]"
             >
               {submitting ? (isEdit ? '更新中...' : '登録中...') : (isEdit ? '更新する' : '登録する')}
             </button>
