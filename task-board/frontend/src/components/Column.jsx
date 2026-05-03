@@ -33,10 +33,10 @@ function Column({ label, status, tasks }) {
 
   return (
     <>
-      <div className="bg-gray-200 rounded-lg w-72 flex-shrink-0 p-3 flex flex-col gap-2">
+      <div className="bg-gray-200 dark:bg-gray-800 rounded-lg w-72 flex-shrink-0 p-3 flex flex-col gap-2 transition-colors duration-200">
         <div className="flex justify-between items-center pb-1">
-          <h2 className="font-bold text-gray-800">{label}</h2>
-          <span className="bg-gray-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
+          <h2 className="font-bold text-gray-800 dark:text-gray-100">{label}</h2>
+          <span className="bg-gray-500 dark:bg-gray-600 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
             {tasks.length}
           </span>
         </div>
@@ -45,7 +45,9 @@ function Column({ label, status, tasks }) {
           <button
             onClick={() => toggleSort('priority')}
             className={`text-xs px-2 py-0.5 rounded transition-colors ${
-              sortKey === 'priority' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-600 hover:bg-gray-400'
+              sortKey === 'priority'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-600'
             }`}
           >
             優先度順
@@ -53,7 +55,9 @@ function Column({ label, status, tasks }) {
           <button
             onClick={() => toggleSort('dueDate')}
             className={`text-xs px-2 py-0.5 rounded transition-colors ${
-              sortKey === 'dueDate' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-600 hover:bg-gray-400'
+              sortKey === 'dueDate'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-600'
             }`}
           >
             期限順
@@ -70,7 +74,7 @@ function Column({ label, status, tasks }) {
 
         <button
           onClick={() => setShowModal(true)}
-          className="mt-1 w-full text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-300 rounded-md py-1.5 transition-colors text-left px-2"
+          className="mt-1 w-full text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-700 rounded-md py-1.5 transition-colors text-left px-2"
         >
           ＋ タスク追加
         </button>

@@ -15,8 +15,8 @@ function Board() {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   )
 
-  if (loading) return <div className="p-8 text-center text-gray-500">読み込み中...</div>
-  if (error)   return <div className="p-8 text-center text-red-500">{error}</div>
+  if (loading) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">読み込み中...</div>
+  if (error)   return <div className="p-8 text-center text-red-500 dark:text-red-400">{error}</div>
 
   const visibleColumns = statusFilter === 'all'
     ? COLUMNS

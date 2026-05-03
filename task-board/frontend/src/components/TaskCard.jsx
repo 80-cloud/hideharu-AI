@@ -85,23 +85,23 @@ function TaskCard({ task }) {
       <div
         ref={setNodeRef}
         style={style}
-        className={`bg-white rounded-lg shadow-sm border-l-4 ${borderColor} ${isDragging ? 'opacity-50 shadow-lg' : ''}`}
+        className={`bg-white dark:bg-gray-700 rounded-lg shadow-sm border-l-4 ${borderColor} ${isDragging ? 'opacity-50 shadow-lg' : ''} transition-colors duration-200`}
       >
         {/* ドラッグハンドル */}
         <div
           ref={setActivatorNodeRef}
           {...listeners}
           {...attributes}
-          className="flex justify-center py-1 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 select-none"
+          className="flex justify-center py-1 cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-500 hover:text-gray-400 dark:hover:text-gray-400 select-none"
         >
           ⠿⠿⠿
         </div>
 
         <div className="px-3 pb-3">
-          <p className="font-semibold text-gray-800 text-sm mb-1 break-words">{task.title}</p>
+          <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm mb-1 break-words">{task.title}</p>
 
           {task.description && (
-            <p className="text-xs text-gray-500 mb-2 line-clamp-3">{task.description}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 line-clamp-3">{task.description}</p>
           )}
 
           <div className="flex items-center justify-between flex-wrap gap-1 mb-2">
@@ -110,7 +110,7 @@ function TaskCard({ task }) {
             </span>
 
             {task.dueDate && (
-              <span className={`text-xs ${overdue ? 'text-red-500 font-bold' : 'text-gray-400'}`}>
+              <span className={`text-xs ${overdue ? 'text-red-500 dark:text-red-400 font-bold' : 'text-gray-400 dark:text-gray-500'}`}>
                 {overdue && '⚠ 期限切れ '}
                 {formatDate(task.dueDate)}
               </span>
@@ -118,15 +118,15 @@ function TaskCard({ task }) {
           </div>
 
           {cardError && (
-            <p className="text-xs text-red-500 mb-1">{cardError}</p>
+            <p className="text-xs text-red-500 dark:text-red-400 mb-1">{cardError}</p>
           )}
 
-          <div className="flex items-center justify-between gap-1 pt-1 border-t border-gray-100">
+          <div className="flex items-center justify-between gap-1 pt-1 border-t border-gray-100 dark:border-gray-600">
             {nextStatus && (
               <button
                 onClick={handleStatusChange}
                 disabled={moving}
-                className="text-xs text-blue-600 hover:text-blue-800 font-medium disabled:opacity-40 truncate"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium disabled:opacity-40 truncate"
               >
                 {moving ? '移動中...' : `→ ${nextStatus.label}`}
               </button>
@@ -135,14 +135,14 @@ function TaskCard({ task }) {
             <div className="flex gap-1 flex-shrink-0">
               <button
                 onClick={() => setShowEdit(true)}
-                className="text-xs px-2 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600"
+                className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-600 dark:text-gray-300"
               >
                 編集
               </button>
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="text-xs px-2 py-0.5 rounded bg-red-50 hover:bg-red-100 text-red-500 disabled:opacity-40"
+                className="text-xs px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-500 dark:text-red-400 disabled:opacity-40"
               >
                 {deleting ? '...' : '削除'}
               </button>
