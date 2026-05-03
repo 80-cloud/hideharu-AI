@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTaskContext } from '../context/TaskContext'
 import { useTheme } from '../context/ThemeContext'
+import { useReminder } from '../hooks/useReminder'
 import TaskFormModal from './TaskFormModal'
 
 const STATUS_BUTTONS = [
@@ -15,9 +16,12 @@ function Header() {
   const days = ['日', '月', '火', '水', '木', '金', '土']
   const dateStr = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日（${days[today.getDay()]}）`
 
-  const { searchQuery, setSearchQuery, statusFilter, setStatusFilter } = useTaskContext()
+  const { tasks, searchQuery, setSearchQuery, statusFilter, setStatusFilter } = useTaskContext()
   const { isDark, toggleTheme } = useTheme()
+  const { permission, requestPermission } = useReminder(tasks)
   const [showModal, setShowModal] = useState(false)
+
+  const notificationSupported = typeof Notification !== 'undefined'
 
   return (
     <>
@@ -26,7 +30,19 @@ function Header() {
         <div className="flex flex-wrap items-center gap-2 mb-2 md:mb-3">
           <h1 className="text-lg md:text-xl font-bold whitespace-nowrap">タスク管理ボード</h1>
           <p className="text-xs md:text-sm opacity-80 whitespace-nowrap">{dateStr}</p>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
+            {/* リマインダー通知ボタン */}
+            {notificationSupported && permission === 'default' && (
+              <button
+                onClick={requestPermission}
+                className="px-2 md:px-3 py-2 rounded-md text-xs md:text-sm font-medium transition-colors bg-yellow-500 hover:bg-yellow-400 text-white min-h-[44px] whitespace-nowrap"
+              >
+                通知を有効にする
+              </button>
+            )}
+            {notificationSupported && permission === 'granted' && (
+              <span className="text-xs opacity-70 whitespace-nowrap">通知 ON</span>
+            )}
             <button
               onClick={toggleTheme}
               className="px-2 md:px-3 py-2 rounded-md text-xs md:text-sm font-medium transition-colors bg-blue-500 dark:bg-gray-700 hover:bg-blue-400 dark:hover:bg-gray-600 text-white min-h-[44px] min-w-[72px]"
