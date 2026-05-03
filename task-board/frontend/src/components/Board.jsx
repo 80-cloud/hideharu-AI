@@ -1,4 +1,4 @@
-import { DndContext, PointerSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core'
+import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core'
 import { useTaskContext } from '../context/TaskContext'
 import Column from './Column'
 
@@ -12,7 +12,8 @@ function Board() {
   const { tasks, loading, error, statusFilter, updateTask } = useTaskContext()
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 8 } })
   )
 
   if (loading) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">読み込み中...</div>
@@ -55,7 +56,7 @@ function Board() {
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
-      <main className="flex gap-4 p-6 overflow-x-auto items-start">
+      <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 md:p-6 items-start">
         {visibleColumns.map(col => (
           <Column
             key={col.status}
