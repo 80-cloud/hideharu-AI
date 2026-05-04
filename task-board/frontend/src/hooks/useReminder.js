@@ -1,14 +1,15 @@
 import { useEffect, useRef } from 'react'
 
-const CHECK_INTERVAL_MS = 60 * 60 * 1000 // 1時間ごと
+const CHECK_INTERVAL_MS = 60 * 60 * 1000
 const NOTIFIED_KEY = 'taskboard_notified'
+
+const notificationAvailable = typeof Notification !== 'undefined'
 
 function getNotifiedIds() {
   try {
     const today = new Date().toDateString()
     const raw = localStorage.getItem(NOTIFIED_KEY)
     const data = raw ? JSON.parse(raw) : {}
-    // 今日以外のキャッシュはリセット
     return data.date === today ? new Set(data.ids) : new Set()
   } catch {
     return new Set()
@@ -25,6 +26,7 @@ function saveNotifiedIds(ids) {
 }
 
 function checkAndNotify(tasks) {
+  if (!notificationAvailable) return                    // iOS Safari 対応
   if (Notification.permission !== 'granted') return
 
   const today = new Date()
@@ -43,25 +45,21 @@ function checkAndNotify(tasks) {
     due.setHours(0, 0, 0, 0)
 
     let title = ''
-    let body = ''
+    let body  = ''
 
     if (due < today) {
       title = '期限切れのタスクがあります'
-      body = `「${task.title}」の期限が過ぎています。`
+      body  = `「${task.title}」の期限が過ぎています。`
     } else if (due.getTime() === today.getTime()) {
       title = '本日期限のタスクがあります'
-      body = `「${task.title}」は今日が期限です。`
+      body  = `「${task.title}」は今日が期限です。`
     } else if (due.getTime() === tomorrow.getTime()) {
       title = '明日期限のタスクがあります'
-      body = `「${task.title}」は明日が期限です。`
+      body  = `「${task.title}」は明日が期限です。`
     }
 
     if (title) {
-      new Notification(title, {
-        body,
-        icon: '/vite.svg',
-        tag:  `task-${task.id}`,
-      })
+      new Notification(title, { body, icon: '/vite.svg', tag: `task-${task.id}` })
       notifiedIds.add(task.id)
     }
   })
@@ -74,26 +72,22 @@ export function useReminder(tasks) {
   tasksRef.current = tasks
 
   useEffect(() => {
+    if (!notificationAvailable) return                  // iOS Safari 対応
     if (Notification.permission !== 'granted') return
 
     checkAndNotify(tasksRef.current)
-
-    const timer = setInterval(() => {
-      checkAndNotify(tasksRef.current)
-    }, CHECK_INTERVAL_MS)
-
+    const timer = setInterval(() => checkAndNotify(tasksRef.current), CHECK_INTERVAL_MS)
     return () => clearInterval(timer)
   }, [])
 
   async function requestPermission() {
+    if (!notificationAvailable) return 'denied'         // iOS Safari 対応
     const result = await Notification.requestPermission()
-    if (result === 'granted') {
-      checkAndNotify(tasksRef.current)
-    }
+    if (result === 'granted') checkAndNotify(tasksRef.current)
     return result
   }
 
-  const permission = typeof Notification !== 'undefined' ? Notification.permission : 'denied'
+  const permission = notificationAvailable ? Notification.permission : 'denied'
 
   return { permission, requestPermission }
 }
