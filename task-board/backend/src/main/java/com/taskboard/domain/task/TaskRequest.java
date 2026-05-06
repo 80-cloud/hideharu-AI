@@ -3,6 +3,7 @@ package com.taskboard.domain.task;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,4 +29,8 @@ public class TaskRequest {
     // null の場合は Task.from() で "todo" がデフォルト設定される
     @Pattern(regexp = "todo|doing|done", message = "ステータスは todo / doing / done のいずれかで指定してください")
     private String status;
+
+    // null の場合は作成時にステータスごとの末尾、更新時は既存値を維持する
+    @PositiveOrZero(message = "並び順は0以上の整数で指定してください")
+    private Integer sortOrder;
 }

@@ -8,12 +8,16 @@ const COLUMNS = [
   { status: 'done',  label: '完了' },
 ]
 
+const STATUSES = ['todo', 'doing', 'done']
+
 function Board() {
-  const { tasks, loading, error, statusFilter, updateTask } = useTaskContext()
+  const { tasks, loading, error, statusFilter, moveTask } = useTaskContext()
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 8 } })
+    // iPad / iPhone 等のタッチ環境向け: 250ms の長押しでドラッグ起動。
+    // tolerance を広めに取ることで、長押し中の指の微妙な揺れを許容する。
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 10 } })
   )
 
   if (loading) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">読み込み中...</div>
@@ -24,33 +28,26 @@ function Board() {
     : COLUMNS.filter(col => col.status === statusFilter)
 
   async function handleDragEnd({ active, over }) {
-    if (!over) return
+    if (!over || active.id === over.id) return
 
-    const draggedTask = tasks.find(t => t.id === active.id)
-    if (!draggedTask) return
-
-    const STATUSES = ['todo', 'doing', 'done']
-    let targetStatus
+    let destStatus
+    let beforeId = null
 
     if (STATUSES.includes(over.id)) {
-      targetStatus = over.id
+      // カラム droppable に直接ドロップ → 末尾へ
+      destStatus = over.id
+      beforeId = null
     } else {
       const overTask = tasks.find(t => t.id === over.id)
-      targetStatus = overTask?.status
+      if (!overTask) return
+      destStatus = overTask.status
+      beforeId = over.id
     }
 
-    if (targetStatus && draggedTask.status !== targetStatus) {
-      try {
-        await updateTask(draggedTask.id, {
-          title:       draggedTask.title,
-          description: draggedTask.description,
-          priority:    draggedTask.priority,
-          dueDate:     draggedTask.dueDate,
-          status:      targetStatus,
-        })
-      } catch {
-        console.error('ドラッグ&ドロップによるステータス更新に失敗しました')
-      }
+    try {
+      await moveTask(active.id, destStatus, beforeId)
+    } catch {
+      console.error('タスクの並び替えに失敗しました')
     }
   }
 
@@ -63,6 +60,7 @@ function Board() {
             label={col.label}
             status={col.status}
             tasks={tasks.filter(t => t.status === col.status)}
+            totalTasks={tasks.length}
           />
         ))}
       </main>

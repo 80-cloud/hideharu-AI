@@ -23,7 +23,7 @@ const STATUS_NEXT = {
   done:  { value: 'todo',  label: 'やることへ戻す' },
 }
 
-function TaskCard({ task }) {
+function TaskCard({ task, dragDisabled = false }) {
   const { updateTask, deleteTask } = useTaskContext()
   const [showEdit, setShowEdit] = useState(false)
   const [moving, setMoving] = useState(false)
@@ -38,7 +38,7 @@ function TaskCard({ task }) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id })
+  } = useSortable({ id: task.id, disabled: dragDisabled })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -80,6 +80,12 @@ function TaskCard({ task }) {
     }
   }
 
+  // touchAction: 'none' は iOS Safari で長押しドラッグ前にページがスクロールするのを防ぐ。
+  // 並び替えビュー中はドラッグ無効化のため通常のスクロールを許可する。
+  const handleStyle = dragDisabled
+    ? { touchAction: 'auto' }
+    : { touchAction: 'none' }
+
   return (
     <>
       <div
@@ -90,11 +96,19 @@ function TaskCard({ task }) {
         {/* ドラッグハンドル */}
         <div
           ref={setActivatorNodeRef}
-          {...listeners}
+          {...(dragDisabled ? {} : listeners)}
           {...attributes}
-          className="flex justify-center py-1 cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-500 hover:text-gray-400 dark:hover:text-gray-400 select-none"
+          style={handleStyle}
+          className={`flex justify-center py-2 select-none ${
+            dragDisabled
+              ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+              : 'cursor-grab active:cursor-grabbing text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+          }`}
+          aria-label={dragDisabled ? 'ドラッグ無効（並び替えビュー中）' : 'カードをドラッグして並び替え（タッチデバイスは長押し）'}
+          role="button"
+          tabIndex={dragDisabled ? -1 : 0}
         >
-          ⠿⠿⠿
+          {dragDisabled ? '✕ 並び替え中はドラッグ不可 ✕' : '⠿⠿⠿'}
         </div>
 
         <div className="px-3 pb-3">

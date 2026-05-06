@@ -28,3 +28,11 @@ export async function deleteTask(id) {
   assertPositiveInt(id, 'deleteTask')
   await axios.delete(`/api/tasks/${id}`)
 }
+
+export async function reorderTasks(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error('[reorderTasks] items が空です')
+  }
+  const response = await axios.put('/api/tasks/reorder', { items })
+  return response.data
+}

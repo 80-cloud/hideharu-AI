@@ -3,10 +3,11 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import TaskCard from './TaskCard'
 import TaskFormModal from './TaskFormModal'
+import CircularProgress from './CircularProgress'
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
 
-function Column({ label, status, tasks }) {
+function Column({ label, status, tasks, totalTasks = 0 }) {
   const [showModal, setShowModal] = useState(false)
   const [sortKey, setSortKey] = useState(null)
 
@@ -31,14 +32,23 @@ function Column({ label, status, tasks }) {
     setSortKey(prev => (prev === key ? null : key))
   }
 
+  // 並び替えビュー中はドラッグ操作と並び順が一致しないため、ドラッグを無効化する
+  const dragDisabled = sortKey !== null
+
   return (
     <>
       <div className="bg-gray-200 dark:bg-gray-800 rounded-lg w-full flex-shrink-0 p-3 flex flex-col gap-2 transition-colors duration-200">
         <div className="flex justify-between items-center pb-1">
           <h2 className="font-bold text-gray-800 dark:text-gray-100">{label}</h2>
-          <span className="bg-gray-500 dark:bg-gray-600 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
-            {tasks.length}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="bg-gray-500 dark:bg-gray-600 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
+              {tasks.length}
+            </span>
+            <CircularProgress
+              value={totalTasks === 0 ? 0 : (tasks.length / totalTasks) * 100}
+              status={status}
+            />
+          </div>
         </div>
 
         <div className="flex gap-1 pb-1">
@@ -64,10 +74,16 @@ function Column({ label, status, tasks }) {
           </button>
         </div>
 
+        {dragDisabled && (
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 px-1">
+            並び替えビュー中はドラッグできません（ボタンを再度押すと解除）
+          </p>
+        )}
+
         <SortableContext items={sortedTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
           <div ref={setNodeRef} className="flex flex-col gap-2 min-h-[40px]">
             {sortedTasks.map(task => (
-              <TaskCard key={task.id} task={task} />
+              <TaskCard key={task.id} task={task} dragDisabled={dragDisabled} />
             ))}
           </div>
         </SortableContext>

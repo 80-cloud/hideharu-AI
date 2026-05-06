@@ -38,6 +38,11 @@ public class TaskController {
         return taskService.updateTask(id, request);
     }
 
+    @PutMapping("/reorder")
+    public List<Task> reorderTasks(@Valid @RequestBody ReorderRequest request) {
+        return taskService.reorder(request);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteTask(@PathVariable @Min(1) Integer id) {
