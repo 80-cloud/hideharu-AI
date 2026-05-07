@@ -43,9 +43,10 @@ locals {
   # SGで開放するingressポート一覧
   # すべて var.my_ip_cidr (自PC IP) からのみ許可される
   ingress_ports = [
-    { name = "SSH", port = 22 },         # EC2管理用
-    { name = "Vite", port = 5173 },      # フロントエンド (Vite dev server)
-    { name = "SpringBoot", port = 8080 } # バックエンド (Spring Boot API)
+    { name = "SSH", port = 22 },          # EC2管理用
+    { name = "HTTP", port = 80 },         # Nginx 学習チェックポイント用
+    { name = "Vite", port = 5173 },       # フロントエンド (Vite dev server)
+    { name = "SpringBoot", port = 8080 }, # バックエンド (Spring Boot API)
   ]
 }
 
