@@ -1,0 +1,23 @@
+# Terraform 作業ファイル（ローカルのみ）
+.terraform/
+.terraform.lock.hcl
+
+# ステートファイル（機密情報が含まれる可能性があるため Git 管理外）
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# 変数の実値（IP・鍵パス等を含むため Git 管理外）
+# .example の方は Git 管理する
+*.tfvars
+!*.tfvars.example
+
+# プラン出力
+*.tfplan
+
+# crash log
+crash.log
+crash.*.log
+
+# OS
+.DS_Store
