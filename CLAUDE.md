@@ -144,6 +144,10 @@ Issue・PR には必ずラベルを付けること。
 5. PR なしに main へのコードを反映しない
 6. `.env` ファイルを Git にコミットしない
 7. データベースのパスワードをコードに直書きしない
+8. **`terraform destroy` を本人の明示承認なしに実行しない**（特に auto-approve禁止）
+9. **`terraform apply -auto-approve` を本人の明示承認なしに実行しない**（破壊的変更が含まれる可能性）
+10. **`aws *delete*` `aws *terminate*` `aws s3 rb*` を本人の明示承認なしに実行しない**
+11. **本番データベース・バックアップを削除する操作は、AI 単独で完結させない**（必ず人間の承認をはさむ）
 
 ---
 
@@ -324,3 +328,96 @@ lsof -ti :5432 | xargs kill -9 2>/dev/null; true
 - ルールを変更したい場合は、必ず Issue を立ててから PR 経由で変更すること
 - 直接編集してコミットしない
 - 変更時のコミットメッセージ: `chore: CLAUDE.md のルールを更新 (#番号)`
+
+---
+
+## 12. AI 誤操作防止の多層防御ルール
+
+AWS / Terraform を扱う AI コーディングツールが本番環境を破壊する事故が業界で複数報告されているため、本リポジトリでは **多層防御** で予防する。
+
+### 12-1. 階層別の防御内容
+
+| 階層 | 仕組み | 場所 |
+|---|---|---|
+| 1. **Claude Code 設定** | `permissions.deny` で破壊的コマンドを拒否 | `~/.claude/settings.json`（本リポジトリ外） |
+| 2. **Terraform リソース保護** | `lifecycle { prevent_destroy = true }` | `infra/main.tf` の RDS 等 |
+| 3. **開発ルール** | 本ファイル（CLAUDE.md）の禁止事項 | `CLAUDE.md` セクション 6 |
+| 4. **コードレビュー** | PR ベースのワークフロー | GitHub PR |
+| 5. **AWS リソース保護**（将来） | `deletion_protection = true` / IAM 最小権限 / Backups | AWS Organizations / SCP |
+
+### 12-2. AI が単独で実行してはならない操作
+
+以下は **必ず人間の明示承認をはさむ** こと（CLAUDE.md セクション 6 の補足）：
+
+- `terraform destroy` 全般
+- `terraform apply -auto-approve`（明示承認なしの自動適用）
+- `terraform state rm` / `terraform workspace delete`
+- `aws rds delete-*` / `aws ec2 terminate-*` / `aws s3 rb`
+- `aws iam delete-*`（権限・ロール削除は復旧困難）
+- 本番データに対する手動 SQL（`DROP TABLE` / `TRUNCATE` 等）
+
+### 12-3. RDS の `lifecycle.prevent_destroy` 運用
+
+`infra/main.tf` の `aws_db_instance.main` に `prevent_destroy = true` を設定済み。
+**`terraform destroy` を実行するとエラーで止まる** ようになっている。
+
+正規の手順で削除する場合：
+
+1. `infra/main.tf` を編集して `prevent_destroy = false` に変更
+2. `terraform apply`（lifecycle 変更のみ反映、リソースは無変更）
+3. `terraform destroy` 実行
+4. 完了後、必要なら `prevent_destroy = true` に戻す
+
+→ **「ワンコマンドで destroy できない」状態をデフォルトにすることで、誤操作の窓を狭める**。
+
+### 12-4. デプロイ前監査チェックリスト
+
+PR で AWS / Terraform 変更が含まれる場合、レビュー時に必ず確認：
+
+- [ ] 平文の機密情報がコミットされていない（`grep -rE "(password|secret|api[_-]?key)"`）
+- [ ] 環境固有のハードコード（IP / endpoint / bucket 名）が外部化されている
+- [ ] 無料枠の範囲内（`describe-instance-types --filters free-tier-eligible=true` で確認）
+- [ ] Terraform Toolchain と EC2 上のランタイムバージョンが整合する
+- [ ] `terraform plan` の差分に **意図しない destroy** が含まれていない
+- [ ] `lifecycle.prevent_destroy` を外す変更があれば、その意図がコミットメッセージに明記されている
+
+これらは `~/.claude/skills/terraform-quality-check/` スキルで一括チェックできる。
+
+---
+
+## 13. 他組織での事故事例（教訓カード）
+
+業界で発生した実事例から学び、同じ過ちを繰り返さないために記録する。
+
+### 13-1. 2026年：Claude Code が Terraform で本番環境を全削除
+
+**概要：**
+SNS で報告された事例。Claude Code が Terraform 経由で本番環境のリソースを **バックアップを含めて全削除** したインシデント。
+
+**推測される原因（多層防御がすべて外れていた状態）：**
+- AI が `terraform destroy -auto-approve` を制限なく実行できた
+- dev / prod が同じ AWS アカウント・同じ tfstate で管理されていた
+- RDS / S3 等に `prevent_destroy` / `deletion_protection` が未設定
+- バックアップが同じアカウント内（クロスアカウント分離なし）
+- AI 用 IAM ロールに削除系の Deny ルールがなかった
+- PR-based ワークフローではなく、AI が直接 apply できる構成
+
+**本リポジトリでの予防策：**
+- セクション 12 の階層 1〜4 を適用済み
+- 階層 5（AWS Organizations / SCP / クロスアカウントバックアップ）は本格運用フェーズで実装予定
+
+**教訓：**
+- AI が「クリーンアップして」と言われたら destroy を実行する文脈がある（AI は文脈を慎重に解釈する責任がある）
+- **「便利さ」と「安全性」はトレードオフ**：auto-approve の便利さに対して、誤操作のリスクは取り返しがつかない
+- バックアップは **必ずクロスアカウント** で保管する（同一アカウント内のバックアップは「同じ削除コマンド」で消える）
+
+詳細は `task-board/docs/incidents/INDEX.md` の参照対象として登録。
+
+### 13-2. 教訓カードの追加方針
+
+新しい事故事例を学んだら、以下の形式で本セクションまたは `incidents/` に追加：
+
+- 概要（何が起きたか）
+- 推測される原因（多層防御の何が外れていたか）
+- 本リポジトリでの予防策（階層別に何が効くか）
+- 教訓（再発防止のために守るべきこと）
