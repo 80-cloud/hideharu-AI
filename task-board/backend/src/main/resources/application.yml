@@ -3,9 +3,11 @@ spring:
     name: task-board-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/taskboard
-    username: taskboard
-    password: taskboard
+    # env-var が無い場合は localhost:5432 (docker-compose) にフォールバック。
+    # 本番(EC2+RDS)では ~/.env で上書き、ローカル開発では default のまま動作。
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/taskboard}
+    username: ${DATABASE_USERNAME:taskboard}
+    password: ${DATABASE_PASSWORD:taskboard}
     driver-class-name: org.postgresql.Driver
 
   jpa:
