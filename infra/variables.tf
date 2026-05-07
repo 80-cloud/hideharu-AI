@@ -42,9 +42,9 @@ variable "availability_zone" {
 }
 
 variable "instance_type" {
-  description = "EC2 インスタンスタイプ（無料枠は t2.micro / t3.micro）"
+  description = "EC2 インスタンスタイプ（ap-northeast-1 の無料枠は t3.micro / t4g.micro 等。t2.micro は2024年以降 Free Tier 対象外）"
   type        = string
-  default     = "t2.micro"
+  default     = "t3.micro"
 }
 
 variable "ssh_public_key_path" {
