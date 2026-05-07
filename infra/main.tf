@@ -351,6 +351,28 @@ resource "aws_db_instance" "main" {
   # ログ・監視（学習用なので最小）
   performance_insights_enabled = false
 
+  # ---------------------------------------------------------------------
+  # 削除保護（AI 誤操作による本番DB破壊事故の予防）
+  # ---------------------------------------------------------------------
+  # SNS で「Claude Code が Terraform で本番DB(バックアップ含む)を全削除した
+  # 事案」が報告されたため、多層防御の一層として Terraform レベルで
+  # 削除を物理的にブロックする。
+  #
+  # 動作：terraform destroy を実行すると以下のエラーで停止する：
+  #   "Resource aws_db_instance.main has lifecycle.prevent_destroy set ..."
+  #
+  # 正規の手順で削除したい場合は以下：
+  #   1. このファイルで prevent_destroy = false に変更
+  #   2. terraform apply（lifecycle 変更のみ反映、リソースは触らない）
+  #   3. terraform destroy 実行
+  #   4. destroy 完了後、必要なら prevent_destroy を true に戻す
+  #
+  # 注意：prevent_destroy は変数（var.xxx）で制御できない（Terraform 仕様）
+  # ---------------------------------------------------------------------
+  lifecycle {
+    prevent_destroy = true
+  }
+
   tags = {
     Name = "${local.name_prefix}-db"
   }
