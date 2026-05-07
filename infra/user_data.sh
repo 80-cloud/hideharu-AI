@@ -14,6 +14,27 @@ exec > >(tee -a /var/log/cloud-init-output.log) 2>&1
 echo "===== user_data started: $(date -Iseconds) ====="
 
 # ---------------------------------------------------------------------
+# 0. Swap領域の作成 (4GB)
+# ---------------------------------------------------------------------
+# 理由: t3.micro は RAM 1GB しかないため、Gradle daemon + Spring Boot
+#       + Vite + PostgreSQL を同時稼働させると即 OOM/thrashing が起きる。
+#       swap で物理メモリ不足を一時的に補う。
+#       本番運用ではインスタンスサイズアップが望ましい。
+# ---------------------------------------------------------------------
+echo "===== Creating 4GB swap ====="
+if ! swapon --show | grep -q swapfile; then
+  fallocate -l 4G /swapfile
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  # スワップ使用優先度を下げる（RAM優先）
+  echo 'vm.swappiness=10' > /etc/sysctl.d/99-swap.conf
+  sysctl -p /etc/sysctl.d/99-swap.conf
+fi
+free -h
+
+# ---------------------------------------------------------------------
 # 1. システム更新と基本ツール
 # ---------------------------------------------------------------------
 # 注意: Amazon Linux 2023 には curl-minimal がプリインストール済み。
