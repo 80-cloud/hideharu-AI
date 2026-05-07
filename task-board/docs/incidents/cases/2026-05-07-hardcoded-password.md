@@ -1,7 +1,7 @@
 # 2026-05-07 application.yml に DB パスワードを平文ハードコード
 
 **Phase:** 3 (PR #50 マージ前に発覚)
-**ステータス:** Open（PR #50 内で修正予定）
+**ステータス:** Resolved（Phase 4.5 / commit `f8c37cb` で env-var 化により解消）
 
 ---
 
@@ -48,19 +48,28 @@ DB認証情報が **平文でリポジトリにコミットされた状態** で
 
 ## 是正処置（Remediation）
 
-PR #50 内で以下を追加コミット予定：
+**実施済み（Phase 4.5 / commit `f8c37cb` / Issue #52）：**
 
-1. `application.yml` を環境変数駆動に：
+1. ✅ `application.yml` を環境変数駆動に変更：
    ```yaml
    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/taskboard}
    username: ${DATABASE_USERNAME:taskboard}
    password: ${DATABASE_PASSWORD:taskboard}
    ```
-2. `docker-compose.yml` を `${POSTGRES_PASSWORD}` 等の変数参照に
-3. `.env.example` 新規作成、`.env` を `.gitignore` に追加
-4. `start.sh` / `user_data.sh` で env 注入
+2. ✅ `docker-compose.yml` を `${POSTGRES_PASSWORD:-default}` 参照形式に変更
+3. ✅ `task-board/.env.example` 新規作成、`task-board/.gitignore` で `.env` を Git管理外に
+4. ✅ `infra/start.sh` 先頭で `~/.env` を source して env を export
+5. ✅ EC2 上で `~/.env` を手動配置（パーミッション 600）
 
-**Phase 4 で RDS 移行する際は、application.yml は変更不要**（環境変数の値だけ変える）。
+**動作確認済み:**
+- Spring Boot が RDS endpoint (jdbc:postgresql://*.rds.amazonaws.com:5432/taskboard) に接続
+- HikariPool で 10.0.1.90 (EC2) → 10.0.2.100:5432 (RDS) 接続を確立
+- docker-postgres を `docker compose down` で完全停止しても、アプリは RDS のみで動作継続を確認
+- ブラウザから HTTP 200 でタスクボード正常応答
+
+**残存する関連課題（後続 Phase で解消予定）:**
+- ~/.env を user_data で自動生成していない（手動配置）→ Phase 5 で SSM Parameter Store / Secrets Manager 化
+- Git 履歴には過去の平文パスワードコミット（`b188921` 等）が残存。プライベートリポジトリのため即時削除はせず、Git filter-repo / BFG での履歴書き換えは別 Phase で検討
 
 ## 再発防止（Prevention / Jidoka）
 

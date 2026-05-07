@@ -26,7 +26,7 @@
 
 | 日付 | タイトル | ステータス |
 |---|---|---|
-| 2026-05-07 | [application.yml に DB パスワードを平文ハードコード](cases/2026-05-07-hardcoded-password.md) | Open |
+| 2026-05-07 | [application.yml に DB パスワードを平文ハードコード](cases/2026-05-07-hardcoded-password.md) | **Resolved** |
 
 ### 🔄 クロスレイヤー整合性
 
