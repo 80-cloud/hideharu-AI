@@ -54,7 +54,29 @@ curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-co
 chmod +x "${DOCKER_PLUGINS}/docker-compose"
 
 # ---------------------------------------------------------------------
-# 5. インストール結果の検証ログ出力
+# 5. アプリリポジトリの clone（ec2-user 所有で配置）
+# ---------------------------------------------------------------------
+# 注意: 本Issue (#49) 対応中はテストのため feature ブランチを参照する。
+# PR マージ後は GIT_BRANCH を main に戻すこと。
+# ---------------------------------------------------------------------
+echo "===== Cloning hideharu-AI repository ====="
+GIT_BRANCH="feature/#49-aws-app-deploy"
+sudo -u ec2-user git clone --branch "$GIT_BRANCH" \
+  https://github.com/80-cloud/hideharu-AI.git \
+  /home/ec2-user/hideharu-AI
+
+# ---------------------------------------------------------------------
+# 6. start.sh を ec2-user ホームに配置（infra/start.sh の中身を埋め込む）
+# ---------------------------------------------------------------------
+# user_data 内に埋め込むのではなく、clone したリポジトリ内 infra/start.sh を
+# ec2-user ホームへコピーすることで、コードの単一ソースを保つ。
+echo "===== Placing start.sh at /home/ec2-user/start.sh ====="
+cp /home/ec2-user/hideharu-AI/infra/start.sh /home/ec2-user/start.sh
+chown ec2-user:ec2-user /home/ec2-user/start.sh
+chmod +x /home/ec2-user/start.sh
+
+# ---------------------------------------------------------------------
+# 7. インストール結果の検証ログ出力
 # ---------------------------------------------------------------------
 echo "===== Verification ====="
 java --version
@@ -64,5 +86,7 @@ npm --version
 docker --version
 docker compose version
 git --version
+ls -la /home/ec2-user/hideharu-AI
+ls -la /home/ec2-user/start.sh
 
 echo "===== user_data finished: $(date -Iseconds) ====="
