@@ -240,3 +240,118 @@ resource "aws_eip" "app" {
 
   depends_on = [aws_internet_gateway.main]
 }
+
+# =====================================================================
+# Phase 4: RDS (PostgreSQL) 関連リソース
+# =====================================================================
+# 学習方針：
+# - publicly_accessible = false（外部から直接接続不可）
+# - SG は EC2 SG からのみ 5432 を許可（IPベースではなくSG参照）
+# - パブリックサブネット2つで構成（学習簡便性、RDSは最低2AZ必須）
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 2つ目のパブリックサブネット（別AZ）
+# DB Subnet Group は最低2AZ必要なため、既存(1a)に追加で(1c)を作る
+# ---------------------------------------------------------------------
+# tfsec:ignore:aws-ec2-no-public-ip-subnet
+resource "aws_subnet" "public_b" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_b_cidr
+  availability_zone       = var.availability_zone_b
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "${local.name_prefix}-public-subnet-b"
+  }
+}
+
+resource "aws_route_table_association" "public_b" {
+  subnet_id      = aws_subnet.public_b.id
+  route_table_id = aws_route_table.public.id
+}
+
+# ---------------------------------------------------------------------
+# DB Subnet Group：RDSが配置可能なサブネットの集合
+# ---------------------------------------------------------------------
+resource "aws_db_subnet_group" "main" {
+  name       = "${local.name_prefix}-db-subnet-group"
+  subnet_ids = [aws_subnet.public.id, aws_subnet.public_b.id]
+
+  tags = {
+    Name = "${local.name_prefix}-db-subnet-group"
+  }
+}
+
+# ---------------------------------------------------------------------
+# RDS 用 Security Group
+# ★ EC2 の SG からのみ 5432 を許可（SG参照）
+#   IPアドレスベースではなく "EC2 SG に属する全インスタンス" を許可
+# ---------------------------------------------------------------------
+resource "aws_security_group" "rds" {
+  name        = "${local.name_prefix}-rds-sg"
+  description = "Security group for RDS - allow PostgreSQL only from EC2 SG"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "PostgreSQL from EC2 SG only"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ec2.id]
+  }
+
+  # egress は学習簡便のためデフォルト（無し）。RDS 側からの外向きは不要
+  # tfsec の no-public-egress-sgr は egress 無しの場合は出ない
+
+  tags = {
+    Name = "${local.name_prefix}-rds-sg"
+  }
+}
+
+# ---------------------------------------------------------------------
+# RDS インスタンス（PostgreSQL 16）
+# ---------------------------------------------------------------------
+# 理由: 学習用途のため以下を意図的にスキップ（Phase 5 以降で順次対応）
+#   - performance_insights: コスト最小化（追加課金回避）
+#   - backup_retention_period=1: 学習用 destroy/再作成を頻繁に行うため最小化
+#   - iam_database_authentication: Phase 5 で IAM 認証へ移行予定
+#   - deletion_protection=false: 学習用 destroy のため意図的に無効
+#tfsec:ignore:aws-rds-enable-performance-insights
+#tfsec:ignore:aws-rds-specify-backup-retention
+#tfsec:ignore:aws-rds-enable-iam-auth
+resource "aws_db_instance" "main" {
+  identifier = "${local.name_prefix}-db"
+
+  engine         = "postgres"
+  engine_version = var.db_engine_version
+  instance_class = var.db_instance_class
+
+  allocated_storage     = var.db_allocated_storage
+  max_allocated_storage = var.db_allocated_storage # 自動拡張無効（無料枠超過防止）
+  storage_type          = "gp3"
+  storage_encrypted     = true
+
+  db_name  = var.db_name
+  username = var.db_username
+  password = var.db_password
+  port     = 5432
+
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  vpc_security_group_ids = [aws_security_group.rds.id]
+  publicly_accessible    = false
+
+  multi_az = false # Single-AZ（無料枠の条件）
+
+  # バックアップ・メンテナンス（学習用なので最小設定）
+  backup_retention_period = 1
+  skip_final_snapshot     = true  # destroy時にスナップショットを取らない（学習用）
+  deletion_protection     = false #tfsec:ignore:aws-rds-enable-deletion-protection 学習用 destroy 容易化
+
+  # ログ・監視（学習用なので最小）
+  performance_insights_enabled = false
+
+  tags = {
+    Name = "${local.name_prefix}-db"
+  }
+}

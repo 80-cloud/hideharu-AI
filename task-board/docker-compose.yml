@@ -3,15 +3,18 @@ services:
     image: postgres:16
     container_name: taskboard-db
     environment:
-      POSTGRES_DB: taskboard
-      POSTGRES_USER: taskboard
-      POSTGRES_PASSWORD: taskboard
+      # env が無い場合 taskboard をデフォルト値として利用（ローカル開発の即時起動を維持）。
+      # 本番運用では .env or 環境変数で上書きすること。
+      POSTGRES_DB: ${POSTGRES_DB:-taskboard}
+      POSTGRES_USER: ${POSTGRES_USER:-taskboard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-taskboard}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U taskboard -d taskboard"]
+      # $$VAR でコンテナ内シェルに渡される（compose の変数展開を無効化）
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -63,3 +63,59 @@ variable "my_ip_cidr" {
     error_message = "my_ip_cidr に 0.0.0.0/0 は指定できません（全世界開放は禁止）。"
   }
 }
+
+# --- RDS 関連 ---
+
+variable "public_subnet_b_cidr" {
+  description = "RDS Subnet Group 用の2つ目のパブリックサブネット CIDR（別AZ）"
+  type        = string
+  default     = "10.0.2.0/24"
+}
+
+variable "availability_zone_b" {
+  description = "2つ目のサブネットを置く AZ（既存サブネットと別AZ）"
+  type        = string
+  default     = "ap-northeast-1c"
+}
+
+variable "db_engine_version" {
+  description = "PostgreSQL のバージョン"
+  type        = string
+  default     = "16.10"
+}
+
+variable "db_instance_class" {
+  description = "RDS インスタンスタイプ（無料枠は db.t3.micro）"
+  type        = string
+  default     = "db.t3.micro"
+}
+
+variable "db_allocated_storage" {
+  description = "RDS ストレージ容量(GB)（無料枠は20GBまで）"
+  type        = number
+  default     = 20
+}
+
+variable "db_name" {
+  description = "RDS の初期データベース名"
+  type        = string
+  default     = "taskboard"
+}
+
+variable "db_username" {
+  description = "RDS のマスターユーザー名"
+  type        = string
+  default     = "taskboard"
+}
+
+variable "db_password" {
+  description = "RDS のマスターパスワード（terraform.tfvarsで指定。最低8文字）"
+  type        = string
+  sensitive   = true
+  # default 無し：terraform.tfvars で必ず明示すること
+
+  validation {
+    condition     = length(var.db_password) >= 8
+    error_message = "db_password は8文字以上で指定してください。"
+  }
+}

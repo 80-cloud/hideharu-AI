@@ -26,7 +26,13 @@
 
 | 日付 | タイトル | ステータス |
 |---|---|---|
-| 2026-05-07 | [application.yml に DB パスワードを平文ハードコード](cases/2026-05-07-hardcoded-password.md) | Open |
+| 2026-05-07 | [application.yml に DB パスワードを平文ハードコード](cases/2026-05-07-hardcoded-password.md) | **Resolved** |
+
+### 🌐 環境固有設定のハードコード
+
+| 日付 | タイトル | ステータス |
+|---|---|---|
+| 2026-05-07 | [CORS 設定が EC2 EIP を許可しておらず POST 失敗](cases/2026-05-07-cors-rejected-ec2-ip.md) | **Resolved** |
 
 ### 🔄 クロスレイヤー整合性
 

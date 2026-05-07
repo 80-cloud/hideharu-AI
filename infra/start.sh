@@ -17,6 +17,24 @@
 # =====================================================================
 set -euo pipefail
 
+# ---------------------------------------------------------------------
+# 環境変数の読み込み（~/.env が存在すれば自動 export）
+# ---------------------------------------------------------------------
+# ~/.env に DATABASE_URL / DATABASE_USERNAME / DATABASE_PASSWORD を
+# 定義しておくと、Spring Boot がそれを読んで RDS に接続する。
+# ファイルが無い場合は application.yml の default (localhost) にフォールバック
+# = docker-compose の PostgreSQL を使う動作になる。
+# ---------------------------------------------------------------------
+if [ -f "$HOME/.env" ]; then
+  set -a # この後 source した変数を自動 export
+  # shellcheck disable=SC1091
+  source "$HOME/.env"
+  set +a
+  echo "✅ ~/.env を読み込みました（DB接続先: ${DATABASE_URL:-未設定}）"
+else
+  echo "⚠️ ~/.env が無いため docker-postgres にフォールバック"
+fi
+
 REPO_DIR="$HOME/hideharu-AI/task-board"
 BACKEND_LOG="$HOME/backend.log"
 FRONTEND_LOG="$HOME/frontend.log"

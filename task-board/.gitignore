@@ -1,0 +1,8 @@
+# 環境変数ファイル（機密情報を含むため Git 管理外）
+# .env.example はコミット可（プレースホルダのみ）
+.env
+.env.local
+.env.*.local
+
+# OS 固有ファイル
+.DS_Store
