@@ -1,0 +1,27 @@
+# =====================================================================
+# terraform.tfvars.example — 値の雛形
+# =====================================================================
+# 使い方：
+#   1. このファイルを `terraform.tfvars` という名前でコピー
+#   2. allowed_ssh_cidr を自分のグローバル IP に書き換え
+#   3. terraform.tfvars は .gitignore で Git 管理外（このファイルだけコミット）
+#
+# 自分のグローバル IP の確認方法：
+#   curl -s https://checkip.amazonaws.com
+# =====================================================================
+
+# --- 必須項目（default 無し） ---
+
+# 全ingress(SSH/Vite/SpringBoot)を許可する自分のグローバル IP（必ず /32 で絞ること）
+# 0.0.0.0/0 は禁止（バリデーションでエラーになる）
+my_ip_cidr = "203.0.113.10/32" # ← ここを書き換える
+
+# --- 任意項目（default を上書きしたい場合のみ） ---
+# aws_region          = "ap-northeast-1"
+# project_name        = "task-board"
+# environment         = "dev"
+# vpc_cidr            = "10.0.0.0/16"
+# public_subnet_cidr  = "10.0.1.0/24"
+# availability_zone   = "ap-northeast-1a"
+# instance_type       = "t3.micro"
+# ssh_public_key_path = "~/.ssh/aws-task-board.pub"
