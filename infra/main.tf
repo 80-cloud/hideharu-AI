@@ -214,6 +214,12 @@ resource "aws_instance" "app" {
     http_endpoint = "enabled"
   }
 
+  # cloud-init で Java25 / Node22 / Docker / Git を自動インストール
+  # スクリプトは infra/user_data.sh を参照
+  # user_data 変更時はインスタンス再作成（既存EC2を破棄して新規作成）
+  user_data                   = file("${path.module}/user_data.sh")
+  user_data_replace_on_change = true
+
   tags = {
     Name = "${local.name_prefix}-ec2"
   }
