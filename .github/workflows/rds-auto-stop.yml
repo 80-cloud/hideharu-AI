@@ -1,0 +1,79 @@
+name: RDS Auto Stop (F3 解体)
+
+# ============================================
+# scout-drone-protocol v3.3 F3 解体: RDS 7 日自動再起動の阻止
+# ============================================
+# 目的:
+#   AWS の仕様 = stopped RDS は 7 日後に自動再起動する。
+#   これを阻止するため、5 日ごとに自動的に stop し直す。
+#
+# 関連:
+#   - hideharu-AI#60: 本 workflow の Issue
+#   - recipe-board#75: scout-drone-protocol v3.3
+#   - F3 達成 Level: L3（解体）
+#   - L4 化（destroy/recreate 運用）は別 Issue で持ち越し
+#
+# 安全策:
+#   - 専用 IAM user `github-actions-rds-stop`（最小権限）
+#   - rds:StopDBInstance は task-board-dev-db に限定
+#   - 冪等: 既に stopped なら no-op
+#   - workflow_dispatch で手動テスト可能
+# ============================================
+
+on:
+  schedule:
+    # 5 日ごと 09:00 JST = 0:00 UTC
+    # 最大ギャップ 5〜6 日 < AWS 7 日自動再起動。安全マージン 1〜2 日。
+    - cron: '0 0 */5 * *'
+  workflow_dispatch:
+    # 手動テスト / 緊急時用
+
+permissions:
+  contents: read
+
+jobs:
+  stop-rds:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-1
+
+      - name: Check current RDS state
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          STATUS=$(aws rds describe-db-instances \
+            --db-instance-identifier task-board-dev-db \
+            --query 'DBInstances[0].DBInstanceStatus' \
+            --output text)
+          echo "Current status: $STATUS"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+
+      - name: Stop RDS if running
+        if: steps.check.outputs.status == 'available'
+        shell: bash
+        run: |
+          echo "🛑 RDS is running (available) — issuing stop"
+          aws rds stop-db-instance \
+            --db-instance-identifier task-board-dev-db
+          echo "✅ Stop requested"
+
+      - name: Skip (already not running)
+        if: steps.check.outputs.status != 'available'
+        shell: bash
+        env:
+          STATUS: ${{ steps.check.outputs.status }}
+        run: |
+          echo "✅ RDS state = '$STATUS' (not running) — no action needed"
+          echo "::notice::F3 解体: RDS already stopped/stopping. Idempotent no-op."
+
+      - name: Heartbeat log
+        shell: bash
+        run: |
+          echo "::notice::🟢 RDS Auto Stop workflow completed at $(date -u)"
+          echo "Next run: every 5 days via cron '0 0 */5 * *'"
