@@ -44,7 +44,7 @@ jobs:
 
             1. **機密情報の平文記載禁止** — credentials / api_key / password / token / secret が
                env-var 経由・Secrets 参照になっているか
-               (関連事故: 2026-05-07 task-board `password: taskboard` 平文流出 in public repo)
+               (関連事故: 2026-05-07 task-board での DB 接続パスワード平文流出 in public repo)
             2. **静的解析の盲点** — CI / lint / gitleaks / shellcheck pass = 「既知のみクリア」。
                未知の OS 仕様・単発実行・一時障害・暗黙挙動を含む可能性を別途確認
             3. **重大度キャリブレーション** — 🚨/🔴 を乱発禁止。本物の不可逆事故にだけ重いトーン
