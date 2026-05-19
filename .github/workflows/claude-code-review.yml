@@ -39,6 +39,20 @@ jobs:
 
             ## レビュー手順
 
+            ### Step 0: 修練城プロトコル照合 (Pre-flight)
+            本リポジトリは多層防御 + 学習継承の修練城プロトコル下で運用されます。レビュー前に以下を確認:
+
+            1. **機密情報の平文記載禁止** — credentials / api_key / password / token / secret が
+               env-var 経由・Secrets 参照になっているか
+               (関連事故: 2026-05-07 task-board `password: taskboard` 平文流出 in public repo)
+            2. **静的解析の盲点** — CI / lint / gitleaks / shellcheck pass = 「既知のみクリア」。
+               未知の OS 仕様・単発実行・一時障害・暗黙挙動を含む可能性を別途確認
+            3. **重大度キャリブレーション** — 🚨/🔴 を乱発禁止。本物の不可逆事故にだけ重いトーン
+            4. **prevent_destroy 確認** (Terraform PR の場合) — RDS / S3 等の不可逆リソースに
+               `lifecycle { prevent_destroy = true }` が設定されているか
+               (関連事故: Claude Code が Terraform で本番環境全削除した業界事例)
+            5. **drone-first 原則** — PR が「とりあえず修正」型でないか、調査を伴う型か
+
             ### ステップ1: 過去のレビュー確認（重複指摘の防止）
             1. このPRの過去のレビューコメントを確認
             2. 対応済みの項目は再指摘しない
@@ -119,7 +133,26 @@ jobs:
             - **日本語でフィードバックする**
             - **具体的で建設的な提案をする**
             - **調査した結果「問題なし」と判断した項目は出力しない**
-            - **「重大」「🔴」等の重い言葉を乱発しない**
+            - **「重大」「🔴」等の重い言葉を乱発しない**（修練城ルール `feedback_severity_calibration`）
             - **学習用プロジェクトであることを踏まえ、過度に厳しい指摘は避ける**（教育的・建設的に）
+
+            ### Step 5: 修練城フィードバック (成長メカニズム)
+            レビュー終了時、以下を別セクションで出力 (memory / incident library 更新の判断材料):
+
+            #### 🔄 過去 incident との類似度
+            今回の変更/指摘が過去事故と症状/兆候/真因のいずれかで類似する場合、ID と類似性を明示。
+            類似ありなら重大度の 1 段階昇格を検討。代表事故:
+            - 2026-05-07-password-plaintext-leak (機密情報の平文流出)
+            - 2026-05-10-cwd-branch-state-4th-recurrence (cd 前置漏れ)
+            - 2026-05-19-add-A-cwd-mismatch (`git add -A` cwd 暗黙依存)
+            - industry-Claude-Terraform-prod-destroy (lifecycle.prevent_destroy 未設定)
+
+            #### 🆕 新規防御候補
+            本レビューで「修練城に追加すべき」と感じた防御案を name / why / how to apply の 3 要素で提示。
+            無理に出さなくてよい (発見ゼロの PR の方が多い)。
+
+            #### 📊 修練城ルール違反の検知履歴
+            本 PR で検知された修練城ルール (feedback_*.md スラグで列挙、件数添えて)。
+            同種違反が複数検知されたら「ルール強化必要」サイン。
 
           use_sticky_comment: true
