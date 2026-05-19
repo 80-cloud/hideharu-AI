@@ -1,0 +1,121 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code Review
+        id: claude-review
+        uses: anthropics/claude-code-action@beta
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          model: "claude-sonnet-4-6"
+          direct_prompt: |
+            # PRレビュー
+
+            このPRで変更されたファイルを確認し、以下の観点でレビューを実施してください。
+            hideharu-AI (task-board) は学習用 Trello 風タスク管理ボード（Java 21 + Spring Boot 3.5.0 + React + PostgreSQL）です。
+            プロジェクトの規約は CLAUDE.md と要件定義書 (task-board/要件定義書.md) を参照してください。
+
+            ## レビュー手順
+
+            ### ステップ1: 過去のレビュー確認（重複指摘の防止）
+            1. このPRの過去のレビューコメントを確認
+            2. 対応済みの項目は再指摘しない
+            3. 新規変更または未対応の項目のみをレビュー対象とする
+
+            ### ステップ2: 変更ファイルの理解
+            - 変更の意図（新機能、バグ修正、リファクタリング等）
+            - 影響範囲
+            - PRの説明との整合性
+
+            ### ステップ3: レビュー実施
+
+            #### バックエンド (task-board/backend/**, *.java) の変更がある場合
+            - [ ] Spring Security による認証・認可が正しく適用されているか
+            - [ ] JPA / Prepared Statement を使い SQL インジェクションを防いでいるか
+            - [ ] DTO / Entity の境界が適切に分離されているか
+            - [ ] バリデーション（@Valid / @NotNull / @Size）が適切に付与されているか
+            - [ ] 例外処理が GlobalExceptionHandler に集約されているか
+            - [ ] N+1 クエリが発生する可能性がないか（fetch join / EntityGraph 検討）
+            - [ ] 機密情報（DB パスワード / API キー）が env-var 経由で平文ハードコードされていないか
+
+            #### フロントエンド (task-board/frontend/**, *.jsx, *.tsx, *.js, *.ts) の変更がある場合
+            - [ ] React のセキュリティ慣行に従っているか（`dangerouslySetInnerHTML` 直接使用なし）
+            - [ ] フォームバリデーションが過不足なく実装されているか
+            - [ ] API 呼び出しのエラーハンドリングが網羅されているか（401 / 403 / 404 / 500）
+            - [ ] console.log がデバッグ用途で残っていないか
+            - [ ] アクセシビリティ（alt 属性、ARIA、キーボード操作）の基本対応がされているか
+            - [ ] CORS 設定（http://localhost:5173）と整合しているか
+
+            #### インフラ (infra/**, *.tf) の変更がある場合
+            - [ ] terraform fmt / validate が通る形式か
+            - [ ] 平文の機密情報がコミットされていないか
+            - [ ] `lifecycle { prevent_destroy = true }` が必要なリソース（RDS / S3 等）に付与されているか
+            - [ ] 無料枠を超えるリソースタイプ（t2.micro 等）になっていないか（t3.micro 推奨）
+            - [ ] `terraform plan` の差分に意図しない destroy が含まれる懸念がないか
+
+            #### ドキュメント (docs/**, *.md) の変更がある場合
+            - [ ] ドキュメント間の整合性が取れているか（要件定義書とDB設計書、画面設計書など）
+            - [ ] Markdown フォーマットが正しいか
+            - [ ] 内容が正確か
+            - [ ] リンク切れがないか
+
+            #### ワークフロー (.github/**) の変更がある場合
+            - [ ] YAML 構文が正しいか
+            - [ ] パーミッション設定が最小権限の原則に従っているか
+            - [ ] シークレットの取り扱いが適切か
+            - [ ] アクションのバージョンが固定されているか
+
+            #### DB マイグレーション の変更がある場合
+            - [ ] 既存データへの影響（NOT NULL 追加、型変更）を考慮しているか
+            - [ ] インデックスが適切に設計されているか
+            - [ ] ロールバック手順が明確か
+
+            ### ステップ4: レビュー結果の出力
+
+            **問題なしと判断した項目は出力しないでください。**
+            実際に修正が必要な指摘事項、または改善提案がある項目のみ出力してください。
+
+            #### フィードバック形式
+
+            ##### 🔴 必須修正事項（優先度：高）
+            セキュリティ脆弱性・本番事故につながる設計欠陥・認可漏れ・データ破壊リスクなど。
+
+            ##### 🟡 推奨改善事項（優先度：中）
+            バグ・パフォーマンス問題・命名規約違反など。
+
+            ##### 🟢 軽微な提案（優先度：低）
+            typo、表現改善、リファクタ案、テスト追加提案、学習価値のあるコメントなど。
+
+            ##### ✨ 良い点
+            良い実装・記述は積極的に評価。
+
+            #### 注意事項
+            - **日本語でフィードバックする**
+            - **具体的で建設的な提案をする**
+            - **調査した結果「問題なし」と判断した項目は出力しない**
+            - **「重大」「🔴」等の重い言葉を乱発しない**
+            - **学習用プロジェクトであることを踏まえ、過度に厳しい指摘は避ける**（教育的・建設的に）
+
+          use_sticky_comment: true
